@@ -1,0 +1,10 @@
+.tab {
+  min-width: 0;
+  font-size: 9px;
+  letter-spacing: .06em;
+  white-space: normal;
+}
+
+@media (max-width: 650px) {
+  .tab { min-width: 0; }
+}

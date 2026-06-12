@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11100e">
+  <title>Weirdo Custom Guitar Configurator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="responsive-fixes.css">
+  <link rel="stylesheet" href="brand-theme.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="header-pill" href="#">Konfigurator</a>
+    <a class="brand" href="#" aria-label="Weirdo - początek konfiguratora"><img src="assets/logo-weirdo.png" alt="WEIRDO"></a>
+    <div class="header-meta"><span>Etap</span><span class="step-count">01 / 06</span></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow">Zbuduj swój instrument</div>
+      <h1>Twój Weirdo.<br><em>Bez kompromisów.</em></h1>
+      <p>Wybierz materiały, wykończenie i osprzęt. Każdy instrument powstaje ręcznie na podstawie Twojej konfiguracji.</p>
+    </section>
+
+    <section class="configurator">
+      <aside class="preview-panel">
+        <div class="preview-topline">
+          <span>Podgląd konfiguracji</span>
+          <button class="text-button" id="resetButton" type="button">Resetuj</button>
+        </div>
+        <div class="guitar-stage">
+          <canvas id="guitarCanvas" width="1920" height="722" aria-label="Wizualizacja skonfigurowanej gitary"></canvas>
+          <div class="loading" id="canvasLoading">Składamy instrument...</div>
+        </div>
+        <div class="preview-caption">
+          <div><span>Model</span><strong>Weirdo Custom</strong></div>
+          <div><span>Top / boki / główka</span><strong id="previewFinish">Gloss</strong></div>
+          <div><span>Top</span><strong id="previewTop">Klon falisty</strong></div>
+        </div>
+      </aside>
+
+      <div class="controls-panel">
+        <nav class="tabs" aria-label="Etapy konfiguracji">
+          <button class="tab active" data-tab="body" type="button"><b>01</b>Korpus</button>
+          <button class="tab" data-tab="neck" type="button"><b>02</b>Gryf</button>
+          <button class="tab" data-tab="electronics" type="button"><b>03</b>Elektronika</button>
+          <button class="tab" data-tab="hardware" type="button"><b>04</b>Osprzęt</button>
+          <button class="tab" data-tab="extras" type="button"><b>05</b>Modyfikacje</button>
+          <button class="tab" data-tab="summary" type="button"><b>06</b>Podsumowanie</button>
+        </nav>
+
+        <form id="configForm">
+          <section class="tab-panel active" data-panel="body">
+            <div class="section-heading"><span>01</span><div><h2>Korpus i wykończenie</h2><p>Charakter instrumentu zaczyna się od drewna.</p></div></div>
+            <fieldset>
+              <legend>Drewno korpusu</legend>
+              <div class="choice-grid two">
+                <label class="choice recommended"><input type="radio" name="bodyWood" value="Mahoń sapeli" checked><span class="choice-copy"><strong>Mahoń sapeli</strong><small>Ciepły, pełny środek</small></span><i>Rekomendowane</i></label>
+                <label class="choice"><input type="radio" name="bodyWood" value="Jesion"><span class="choice-copy"><strong>Jesion</strong><small>Jasny i selektywny</small></span></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Wykończenie korpusu</legend>
+              <div class="choice-grid two">
+                <label class="choice recommended"><input type="radio" name="bodyFinish" value="Olejowosk" checked><span class="choice-copy"><strong>Olejowosk</strong><small>Naturalny dotyk drewna</small></span><i>Rekomendowane</i></label>
+                <label class="choice"><input type="radio" name="bodyFinish" value="Lakier bezbarwny mat"><span class="choice-copy"><strong>Lakier bezbarwny mat</strong><small>Naturalny kolor, większa ochrona</small></span></label>
+                <label class="choice"><input type="radio" name="bodyFinish" value="Czarny mat"><span class="choice-copy"><strong>Czarny mat</strong><small>Głębokie, jednolite wykończenie</small></span></label>
+                <label class="choice"><input type="radio" name="bodyFinish" value="Czarny metalik"><span class="choice-copy"><strong>Czarny metalik</strong><small>Subtelne metaliczne ziarno</small></span></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Materiał topu</legend>
+              <div class="choice-grid two">
+                <label class="choice recommended"><input type="radio" name="topWood" value="Klon falisty" data-color="#bc5b35" checked><span class="wood-swatch maple"></span><span class="choice-copy"><strong>Klon falisty</strong><small>Wyrazisty rysunek</small></span><i>Rekomendowane</i></label>
+                <label class="choice"><input type="radio" name="topWood" value="Topola czeczot" data-color="#bf744e"><span class="wood-swatch burl"></span><span class="choice-copy"><strong>Topola czeczot</strong><small>Organiczny, unikalny wzór</small></span></label>
+                <label class="choice"><input type="radio" name="topWood" value="Orzech włoski" data-color="#70442f"><span class="wood-swatch walnut"></span><span class="choice-copy"><strong>Orzech włoski</strong><small>Głęboki, naturalny brąz</small></span></label>
+                <label class="choice"><input type="radio" name="topWood" value="Orzech amerykański" data-color="#4e3027"><span class="wood-swatch dark-walnut"></span><span class="choice-copy"><strong>Orzech amerykański</strong><small>Ciemny i elegancki</small></span></label>
+                <label class="choice"><input type="radio" name="topWood" value="Jednolity kolor" data-color="#171717"><span class="wood-swatch solid"></span><span class="choice-copy"><strong>Jednolity kolor</strong><small>Bez widocznego drewna</small></span></label>
+              </div>
+            </fieldset>
+            <div class="field-row">
+              <fieldset><legend>Kolor topu</legend><div class="finish-colors" id="topColorChoices"></div><input id="topColor" name="topColor" type="hidden" value="#d6a824"><small class="field-note">Kolor nakładany jest transparentnie, aby zachować strukturę drewna.</small></fieldset>
+              <fieldset><legend>Wykończenie topu, boków i główki</legend><div class="segmented"><label><input type="radio" name="finish" value="Gloss" checked><span>Gloss</span></label><label><input type="radio" name="finish" value="Mat"><span>Mat</span></label></div></fieldset>
+            </div>
+            <fieldset>
+              <legend>Materiał boków</legend>
+              <div class="choice-grid two">
+                <label class="choice recommended"><input type="radio" name="sideWood" value="Klon falisty"><span class="wood-swatch maple"></span><span class="choice-copy"><strong>Klon falisty</strong><small>Wyrazisty rysunek</small></span><i>Rekomendowane</i></label>
+                <label class="choice"><input type="radio" name="sideWood" value="Topola czeczot"><span class="wood-swatch burl"></span><span class="choice-copy"><strong>Topola czeczot</strong><small>Organiczny, unikalny wzór</small></span></label>
+                <label class="choice"><input type="radio" name="sideWood" value="Orzech włoski"><span class="wood-swatch walnut"></span><span class="choice-copy"><strong>Orzech włoski</strong><small>Głęboki, naturalny brąz</small></span></label>
+                <label class="choice"><input type="radio" name="sideWood" value="Orzech amerykański"><span class="wood-swatch dark-walnut"></span><span class="choice-copy"><strong>Orzech amerykański</strong><small>Ciemny i elegancki</small></span></label>
+                <label class="choice"><input type="radio" name="sideWood" value="Jednolity kolor" checked><span class="wood-swatch solid"></span><span class="choice-copy"><strong>Jednolity kolor</strong><small>Bez widocznego drewna</small></span></label>
+              </div>
+            </fieldset>
+            <fieldset><legend>Kolor boków</legend><div class="finish-colors" id="sideColorChoices"></div><input id="sideColor" name="sideColor" type="hidden" value="#101010"><small class="field-note">Kolor jest transparentny i zachowuje strukturę drewna, poza opcją jednolitą.</small></fieldset>
+            <fieldset>
+              <legend>Binding</legend>
+              <div class="swatch-options" id="bindingChoices"></div>
+            </fieldset>
+            <fieldset>
+              <legend>Pickupy</legend>
+              <div class="choice-grid two">
+                <label class="choice recommended"><input type="radio" name="pickups" value="Czarne bez puszek" checked><span class="pickup-swatch pickup-open"></span><span class="choice-copy"><strong>Czarne bez puszek</strong><small>Odkryte czarne cewki</small></span><i>Rekomendowane</i></label>
+                <label class="choice"><input type="radio" name="pickups" value="W czarnych puszkach"><span class="pickup-swatch pickup-black"></span><span class="choice-copy"><strong>Czarne puszki</strong><small>Jednolita czarna osłona</small></span></label>
+                <label class="choice"><input type="radio" name="pickups" value="W niklowych / chromowanych puszkach"><span class="pickup-swatch pickup-chrome"></span><span class="choice-copy"><strong>Nikiel / chrom</strong><small>Klasyczne metalowe puszki</small></span></label>
+                <label class="choice"><input type="radio" name="pickups" value="W złotych puszkach"><span class="pickup-swatch pickup-gold"></span><span class="choice-copy"><strong>Złote puszki</strong><small>Ciepłe złote wykończenie</small></span></label>
+                <label class="choice"><input type="radio" name="pickups" value="Chromowana ramka z czarnym środkiem"><span class="pickup-swatch pickup-chrome-open"></span><span class="choice-copy"><strong>Chromowana ramka</strong><small>Czarny otwarty środek</small></span></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Kolor osprzętu</legend>
+              <div class="choice-grid four compact">
+                <label class="choice recommended"><input type="radio" name="hardwareColor" value="Czarny"><span class="choice-copy"><strong>Czarny</strong></span><i>Rekomendowane</i></label>
+                <label class="choice"><input type="radio" name="hardwareColor" value="Chrom" checked><span class="choice-copy"><strong>Chrom</strong></span></label>
+                <label class="choice"><input type="radio" name="hardwareColor" value="Złoty"><span class="choice-copy"><strong>Złoty</strong></span></label>
+                <label class="choice"><input type="radio" name="hardwareColor" value="Satynowy nikiel"><span class="choice-copy"><strong>Satynowy nikiel</strong></span></label>
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>Główka</legend>
+              <div class="choice-grid two">
+                <label class="choice recommended"><input type="radio" name="head" value="Czarna" data-color="#0b0b0b" checked><span class="choice-copy"><strong>Czarna</strong><small>Klasyczny kontrast</small></span><i>Rekomendowane</i></label>
+                <label class="choice"><input type="radio" name="head" value="Jak top" data-color="match"><span class="choice-copy"><strong>Jak top</strong><small>Ten sam materiał i kolor</small></span></label>
+              </div>
+            </fieldset>
+          </section>
+
+          <section class="tab-panel" data-panel="neck">
+            <div class="section-heading"><span>02</span><div><h2>Gryf i podstrunnica</h2><p>Dotyk, precyzja i komfort gry.</p></div></div>
+            <fieldset><legend>Materiał podstrunnicy</legend><div class="choice-grid three"><label class="choice recommended"><input type="radio" name="fretboard" value="Heban" data-color="#211d1a" checked><span class="choice-copy"><strong>Heban</strong><small>Twardy i szybki</small></span><i>Rekomendowane</i></label><label class="choice"><input type="radio" name="fretboard" value="Palisander" data-color="#59392f"><span class="choice-copy"><strong>Palisander</strong><small>Ciepły, klasyczny</small></span></label><label class="choice"><input type="radio" name="fretboard" value="Amarant" data-color="#6d344e"><span class="choice-copy"><strong>Amarant</strong><small>Wyrazisty fiolet</small></span></label></div></fieldset>
+            <fieldset><legend>Markery</legend><label class="static-choice selected"><span>Perła</span><small>Domyślne markery podstrunnicy</small></label><input type="hidden" name="markers" value="Perła"></fieldset>
+            <div class="field-row"><fieldset><legend>Długość menzury</legend><label class="static-choice"><span>25.5 cala</span><small>Aktualnie dostępna opcja</small></label><input type="hidden" name="scale" value="25.5 cala"></fieldset><fieldset><legend>Liczba progów</legend><label class="static-choice"><span>24 progi</span><small>Aktualnie dostępna opcja</small></label><input type="hidden" name="fretCount" value="24"></fieldset></div>
+            <fieldset><legend>Materiał progów</legend><div class="choice-grid two"><label class="choice recommended"><input type="radio" name="fretMaterial" value="Stal nierdzewna" checked><span class="choice-copy"><strong>Stal nierdzewna</strong><small>Trwałość i gładkie podciąganie</small></span><i>Rekomendowane</i></label><label class="choice"><input type="radio" name="fretMaterial" value="Niklowane"><span class="choice-copy"><strong>Standardowe niklowane</strong><small>Tradycyjne odczucie</small></span></label></div></fieldset>
+            <fieldset><legend>Rozmiar progów</legend><div class="coming-module"><div><span class="module-icon">+</span><strong>Tabela rozmiarów progów</strong><p>Moduł jest gotowy na tabelę, która pojawi się w folderze <code>progi</code>.</p></div><select name="fretSize" aria-label="Rozmiar progów"><option value="Do ustalenia">Wybierz po dodaniu tabeli</option><option>Small</option><option>Medium</option><option>Jumbo</option></select></div></fieldset>
+          </section>
+
+          <section class="tab-panel" data-panel="electronics">
+            <div class="section-heading"><span>03</span><div><h2>Elektronika</h2><p>Brzmienie i sposób sterowania instrumentem.</p></div></div>
+            <fieldset><legend>Układ elektroniki</legend><label class="static-choice selected"><span>Układ 1</span><small>Aktualnie dostępny układ bocznego panelu</small></label><input type="hidden" name="electronicsLayout" value="Układ 1"></fieldset>
+          </section>
+
+          <section class="tab-panel" data-panel="hardware">
+            <div class="section-heading"><span>04</span><div><h2>Osprzęt</h2><p>Detale, które decydują o funkcjonalności.</p></div></div>
+            <fieldset><legend>Mostek</legend><div class="choice-grid two"><label class="choice recommended"><input type="radio" name="bridge" value="Tune-o-matic Gotoh" checked><span class="choice-copy"><strong>Tune-o-matic Gotoh</strong><small>Sprawdzona konstrukcja</small></span><i>Rekomendowane</i></label><label class="choice"><input type="radio" name="bridge" value="Evertune"><span class="choice-copy"><strong>Evertune</strong><small>Stała stabilność stroju</small></span></label></div></fieldset>
+            <fieldset><legend>Klucze</legend><select name="tuners"><option value="Do ustalenia">Do ustalenia</option><option>Blokowane</option><option>Standardowe</option></select></fieldset>
+            <fieldset><legend>Siodełko</legend><div class="choice-grid four compact"><label class="choice"><input type="radio" name="nut" value="Kość" checked><span class="choice-copy"><strong>Kość</strong></span></label><label class="choice"><input type="radio" name="nut" value="Mosiądz"><span class="choice-copy"><strong>Mosiądz</strong></span></label><label class="choice"><input type="radio" name="nut" value="TUSQ"><span class="choice-copy"><strong>TUSQ</strong></span></label><label class="choice"><input type="radio" name="nut" value="Róg czarny"><span class="choice-copy"><strong>Róg czarny</strong></span></label></div></fieldset>
+            <fieldset><legend>Straplocki</legend><div class="choice-grid two"><label class="choice recommended"><input type="radio" name="straplocks" value="Dunlop Flushmount" checked><span class="choice-copy"><strong>Dunlop Flushmount</strong><small>Minimalistyczny montaż</small></span><i>Rekomendowane</i></label><label class="choice"><input type="radio" name="straplocks" value="Schaller"><span class="choice-copy"><strong>Schaller</strong><small>Klasyczny system blokujący</small></span></label></div></fieldset>
+          </section>
+
+          <section class="tab-panel" data-panel="extras">
+            <div class="section-heading"><span>05</span><div><h2>Dodatkowe modyfikacje</h2><p>Opisz rozwiązania spoza standardowej konfiguracji.</p></div></div>
+            <fieldset><legend>Twoje uwagi</legend><textarea name="modifications" rows="8" placeholder="Np. niestandardowy układ potencjometrów, dodatkowy przełącznik, indywidualne markery, specjalne wykończenie..."></textarea><small class="field-note">Każdą modyfikację potwierdzimy przed rozpoczęciem budowy.</small></fieldset>
+          </section>
+
+          <section class="tab-panel" data-panel="summary">
+            <div class="section-heading"><span>06</span><div><h2>Twoja konfiguracja</h2><p>Sprawdź szczegóły przed wysłaniem zapytania.</p></div></div>
+            <div class="summary-list" id="summaryList"></div>
+            <div class="contact-grid"><label>Imię i nazwisko<input name="customerName" type="text" autocomplete="name" placeholder="Jan Kowalski"></label><label>E-mail<input name="customerEmail" type="email" autocomplete="email" placeholder="jan@email.com"></label></div>
+            <button class="primary-button" type="submit">Wyślij konfigurację <span>→</span></button>
+            <p class="submit-note">Wysłanie formularza nie jest zamówieniem. Skontaktujemy się w sprawie szczegółów i wyceny.</p>
+          </section>
+        </form>
+
+        <div class="panel-navigation"><button class="secondary-button hidden" id="prevButton" type="button">← Wstecz</button><button class="primary-button" id="nextButton" type="button">Dalej <span>→</span></button></div>
+      </div>
+    </section>
+  </main>
+  <footer><span>WEIRDO CUSTOM INSTRUMENTS</span><span>Każdy egzemplarz jest wykonywany ręcznie.</span></footer>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
