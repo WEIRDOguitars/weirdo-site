@@ -421,7 +421,8 @@ function setTab(index) {
   activeTab = Math.max(0, Math.min(tabs.length - 1, index));
   document.querySelectorAll(".tab").forEach((tab, i) => tab.classList.toggle("active", i === activeTab));
   document.querySelectorAll(".tab-panel").forEach((panel, i) => panel.classList.toggle("active", i === activeTab));
-  document.querySelector(".step-count").textContent = `${String(activeTab + 1).padStart(2,"0")} / 06`;
+  const stepCount = document.querySelector(".step-count");
+  if (stepCount) stepCount.textContent = `${String(activeTab + 1).padStart(2,"0")} / 06`;
   document.querySelector("#prevButton").classList.toggle("hidden", activeTab === 0);
   document.querySelector("#nextButton").classList.toggle("hidden", activeTab === tabs.length - 1);
   if (tabs[activeTab] === "summary") updateSummary();
