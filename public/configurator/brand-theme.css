@@ -151,6 +151,8 @@ body {
 .primary-button:hover { background: var(--accent-2); }
 .secondary-button { border-color: var(--line); border-radius: 999px; }
 footer { border-color: var(--line); }
+.form-trap { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.primary-button:disabled { cursor: wait; opacity: .65; }
 
 @media(max-width:1050px) {
   .configurator { grid-template-columns: 1fr; }

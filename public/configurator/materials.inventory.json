@@ -1,0 +1,26 @@
+{
+  "woods": {
+    "top": {
+      "Klon falisty": { "available": true },
+      "Topola czeczot": { "available": true },
+      "Mahoń": { "available": true },
+      "Orzech włoski": { "available": true },
+      "Orzech amerykański": {
+        "available": false,
+        "note": "Chwilowo niedostepne"
+      },
+      "Jednolity kolor": { "available": true }
+    },
+    "sides": {
+      "Klon falisty": { "available": true },
+      "Topola czeczot": { "available": true },
+      "Mahoń": { "available": true },
+      "Orzech włoski": { "available": true },
+      "Orzech amerykański": {
+        "available": false,
+        "note": "Chwilowo niedostepne"
+      },
+      "Jednolity kolor": { "available": true }
+    }
+  }
+}

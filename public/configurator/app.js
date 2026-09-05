@@ -1,64 +1,120 @@
-const tabs = ["body", "neck", "electronics", "hardware", "extras", "summary"];
-let activeTab = 0;
+const form = document.querySelector("#configForm");
+const canvas = document.querySelector("#guitarCanvas");
+const ctx = canvas.getContext("2d", { willReadFrequently: true });
+const loading = document.querySelector("#canvasLoading");
+const stageWrap = document.querySelector(".stage-wrap");
+const frameSlider = document.querySelector("#frameSlider");
+const zoomSlider = document.querySelector("#zoomSlider");
+let viewer3dReady = false;
 
 const defaults = {
-  bodyWood: "Mahoń sapeli", bodyFinish: "Olejowosk", topWood: "Klon falisty", topColor: "#d6a824",
-  sideWood: "Jednolity kolor", sideColor: "#101010", finish: "Gloss",
-  binding: "Perłowy", head: "Czarna", fretboard: "Heban", fretMaterial: "Stal nierdzewna",
-  fretSize: "Do ustalenia", bridge: "Tune-o-matic Gotoh", hardwareColor: "Chrom",
-  tuners: "Do ustalenia", nut: "Kość", straplocks: "Dunlop Flushmount", pickups: "Czarne bez puszek"
+  topWood: "Klon falisty",
+  topColor: "#d6a824",
+  topFinish: "Gloss",
+  sideWood: "Jednolity kolor",
+  sideColor: "#101010",
+  sideFinish: "Gloss",
+  fretboard: "Heban",
+  bodyWood: "Mahoń sapeli",
+  bodyFinish: "Olejowosk",
+  bindingShape: "Standard WEIRDO",
+  binding: "Perłowy",
+  hardwareColor: "Chrom",
+  knobColor: "Chrom",
+  electronicsLayout: "Układ 1: 4 gałki + 2 switche",
+  headMode: "Czarna",
+  headFinish: "Gloss",
+  pickups: "Czarne bez puszek",
+  pickupFrameColor: "Chrom",
+  pickupCenterColor: "Czarny",
+  pickupMagnetColor: "Szare",
+  bridge: "Tune-o-matic Gotoh",
+  tuners: "Do ustalenia",
+  nut: "Kość",
+  straplocks: "Dunlop Flushmount"
 };
-
-const bindingOptions = [
-  ["Perłowy", "#ddd8ca", true], ["Silver dust", "#929699"], ["Czerwony", "#9d4542"],
-  ["Zielony", "#4d8062"], ["Fioletowy", "#716087"], ["Żółty", "#b89d55"], ["Ciemny szary", "#4d4d4d"]
-];
 
 const finishColors = [
   ["Bez barwnika", "natural"],
-  ["Zielony jasny", "#6f9f55"], ["Zielony ciemny", "#24563b"], ["Żółty", "#d6a824"],
-  ["Pomarańczowy jasny", "#d9782d"], ["Pomarańczowy ciemny", "#9b451d"], ["Czerwony", "#8f241e"],
-  ["Fioletowy", "#633f76"], ["Niebieski", "#24588f"], ["Szary", "#66686b"], ["Czarny", "#101010"]
+  ["Zielony jasny", "#6f9f55"],
+  ["Zielony ciemny", "#24563b"],
+  ["Żółty", "#d6a824"],
+  ["Pomarańczowy jasny", "#d9782d"],
+  ["Pomarańczowy ciemny", "#9b451d"],
+  ["Czerwony", "#b51716"],
+  ["Fioletowy", "#633f76"],
+  ["Niebieski", "#1c5fa8"],
+  ["Szary", "#66686b"],
+  ["Czarny", "#101010"],
+  ["Biały", "#f2eee6"],
+  ["Kremowy", "#d8c39a"]
 ];
 
-const form = document.querySelector("#configForm");
-const canvas = document.querySelector("#guitarCanvas");
-const ctx = canvas.getContext("2d");
-const loading = document.querySelector("#canvasLoading");
-const imagePaths = {
-  body: "/configurator/elementy/body.png", sides: "/configurator/elementy/Boki/boki.png", top: "/configurator/elementy/top.png",
-  binding: "/configurator/elementy/binding 1.png", neck: "/configurator/elementy/gryf.png", head: "/configurator/elementy/Head.png",
-  fretboard: "/configurator/elementy/Podstrunnica/Podstrunnica.PNG", frets: "/configurator/elementy/progi/progi1.png",
-  flameMaple: "/configurator/assets/textures/flame-maple.png", poplarBurl: "/configurator/assets/textures/poplar-burl.png",
-  europeanWalnut: "/configurator/assets/textures/european-walnut.png", americanWalnut: "/configurator/assets/textures/american-walnut.png",
-  mapleNatural: "/configurator/drewno/klon bezbarwny.png", mapleEnhanced: "/configurator/drewno/klon podbity.png",
-  poplarBurlCustom: "/configurator/drewno/czeczot.png"
+const bindingOptions = [
+  ["Perłowy", "#CEC0A4", true],
+  ["Silver dust", "#8f9497"],
+  ["Czerwony", "#8f403d"],
+  ["Zielony", "#4f775e"],
+  ["Fioletowy", "#685979"],
+  ["Żółty", "#ad9554"],
+  ["Ciemny szary", "#4d4d4d"]
+];
+
+const assetBase = window.location.protocol === "file:" ? "." : window.location.pathname.includes("/configurator") ? "/configurator" : "";
+const inventoryPath = `${assetBase}/materials.inventory.json`;
+
+const paths = {
+  frames: [
+    `${assetBase}/elementy/calosc%208/1.png`,
+    `${assetBase}/elementy/calosc%208/2.png`,
+    `${assetBase}/elementy/calosc%208/3.png`,
+    `${assetBase}/elementy/calosc%208/4.png`,
+    `${assetBase}/elementy/calosc%208/Visual_(zesp)_2026-Sep-04_11-11-35PM-000_CustomizedView2991787094.png`,
+    `${assetBase}/elementy/calosc%208/6.png`,
+    `${assetBase}/elementy/calosc%208/7.png`,
+    `${assetBase}/elementy/calosc%208/8.png`
+  ],
+  body: `${assetBase}/elementy/body.png`,
+  sides: `${assetBase}/elementy/Boki/boki.png`,
+  top: `${assetBase}/elementy/top.png`,
+  binding: `${assetBase}/elementy/Binding/binding.png`,
+  head: `${assetBase}/elementy/Head.png`,
+  fretboard: `${assetBase}/elementy/Podstrunnica/podstrunnica.png`,
+  hardware: `${assetBase}/elementy/osprzet.png`,
+  knobs: `${assetBase}/elementy/galki.png`,
+  nut: `${assetBase}/elementy/siodelko.png`,
+  mapleNatural: `${assetBase}/tekstury/runtime/maple-flame.png`,
+  mapleEnhanced: `${assetBase}/tekstury/runtime/maple-flame.png`,
+  poplarBurl: `${assetBase}/tekstury/runtime/poplar-burl.png`,
+  mahogany: `${assetBase}/tekstury/runtime/mahogany-top.png`,
+  europeanWalnut: `${assetBase}/tekstury/runtime/walnut.png`,
+  americanWalnut: `${assetBase}/tekstury/runtime/walnut.png`
 };
+
 const images = {};
+const masks = {};
+const frontReferenceTransform = { scale: .7727, x: 173, y: 205 };
 
-document.querySelector("#bindingChoices").innerHTML = bindingOptions.map(([name, color, recommended]) => `
-  <label class="swatch-label" title="${recommended ? "Rekomendowane" : name}">
-    <input type="radio" name="binding" value="${name}" data-color="${color}" ${recommended ? "checked" : ""}>
-    <span class="color-dot" style="background:${color}"></span><span>${name}</span>
-  </label>`).join("");
+function renderPalettes() {
+  ["top", "side"].forEach(kind => {
+    const selected = defaults[`${kind}Color`];
+    const target = `${kind}Color`;
+    const container = document.querySelector(`#${kind}ColorChoices`);
+    container.innerHTML = finishColors.map(([name, color]) => `
+      <button class="finish-color${color === selected ? " active" : ""}" type="button" data-target="${target}" data-color="${color}" title="${name}" aria-label="${name}">
+        <span class="${color === "natural" ? "natural-color" : ""}"${color === "natural" ? "" : ` style="background:${color}"`}></span>
+        <small>${name}</small>
+      </button>
+    `).join("");
+  });
 
-function renderFinishColors(containerId, inputId, selectedColor) {
-  document.querySelector(containerId).innerHTML = finishColors.map(([name, color]) => `
-    <button class="finish-color${color === selectedColor ? " active" : ""}" type="button" data-target="${inputId}" data-color="${color}" aria-label="${name}" title="${name}">
-      <span class="${color === "natural" ? "natural-color" : ""}"${color === "natural" ? "" : ` style="background:${color}"`}></span><small>${name}</small>
-    </button>`).join("");
-}
-
-renderFinishColors("#topColorChoices", "topColor", defaults.topColor);
-renderFinishColors("#sideColorChoices", "sideColor", defaults.sideColor);
-
-function loadImages() {
-  return Promise.all(Object.entries(imagePaths).map(([key, src]) => new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => { images[key] = img; resolve(); };
-    img.onerror = reject;
-    img.src = src;
-  })));
+  document.querySelector("#bindingChoices").innerHTML = bindingOptions.map(([name, color, recommended]) => `
+    <label class="swatch-label" title="${recommended ? "Rekomendowane" : name}">
+      <input type="radio" name="binding" value="${name}" data-color="${color}" ${recommended ? "checked" : ""}>
+      <span class="color-dot" style="background:${color}"></span>
+      <span>${name}</span>
+    </label>
+  `).join("");
 }
 
 function fieldValue(name) {
@@ -66,190 +122,313 @@ function fieldValue(name) {
   return checked ? checked.value : form.elements[name]?.value || "";
 }
 
-function hexToRgb(hex) {
-  const value = hex.replace("#", "");
-  return [parseInt(value.slice(0,2),16), parseInt(value.slice(2,4),16), parseInt(value.slice(4,6),16)];
+function selectedColorName(value) {
+  return finishColors.find(([, color]) => color === value)?.[0] || value;
 }
 
-function tintedLayer(img, color, strength = 0.8) {
-  const layer = document.createElement("canvas");
-  layer.width = canvas.width; layer.height = canvas.height;
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Nie udało się wczytać: ${src}`));
+    img.src = src;
+  });
+}
+
+async function loadImages() {
+  const entries = Object.entries(paths).flatMap(([key, value]) => {
+    if (Array.isArray(value)) return value.map((src, index) => [`frame${index}`, src]);
+    return [[key, value]];
+  });
+
+  await Promise.all(entries.map(async ([key, src]) => {
+    images[key] = await loadImage(src);
+  }));
+
+  ["body", "sides", "top", "binding", "head", "fretboard", "hardware", "knobs", "nut"].forEach(key => {
+    masks[key] = createMask(images[key]);
+  });
+  paths.frames.forEach((_, index) => {
+    masks[`frame${index}`] = createMask(images[`frame${index}`]);
+  });
+}
+
+function createCanvas(width = canvas.width, height = canvas.height) {
+  const element = document.createElement("canvas");
+  element.width = width;
+  element.height = height;
+  return element;
+}
+
+function createMask(img) {
+  const mask = createCanvas(img.width, img.height);
+  const maskCtx = mask.getContext("2d", { willReadFrequently: true });
+  maskCtx.drawImage(img, 0, 0);
+  const data = maskCtx.getImageData(0, 0, mask.width, mask.height);
+
+  for (let i = 0; i < data.data.length; i += 4) {
+    const r = data.data[i];
+    const g = data.data[i + 1];
+    const b = data.data[i + 2];
+    const distance = Math.abs(r - 178) + Math.abs(g - 178) + Math.abs(b - 178);
+    data.data[i + 3] = distance < 34 ? 0 : 255;
+  }
+
+  maskCtx.putImageData(data, 0, 0);
+  return mask;
+}
+
+function drawMaskedBase(targetCtx, img, mask) {
+  targetCtx.drawImage(img, 0, 0);
+  targetCtx.globalCompositeOperation = "destination-in";
+  targetCtx.drawImage(mask, 0, 0);
+  targetCtx.globalCompositeOperation = "source-over";
+}
+
+function drawTransformedLayer(targetCtx, layer, transform = frontReferenceTransform) {
+  targetCtx.save();
+  targetCtx.setTransform(transform.scale, 0, 0, transform.scale, transform.x, transform.y);
+  targetCtx.drawImage(layer, 0, 0);
+  targetCtx.restore();
+}
+
+function solidLayer(mask, color) {
+  const layer = createCanvas();
   const layerCtx = layer.getContext("2d");
-  layerCtx.drawImage(img, 0, 0);
-  layerCtx.globalCompositeOperation = "source-atop";
-  layerCtx.globalAlpha = strength;
-  layerCtx.fillStyle = color;
+  layerCtx.fillStyle = color === "natural" ? "#d6b27a" : color;
   layerCtx.fillRect(0, 0, layer.width, layer.height);
-  layerCtx.globalCompositeOperation = "multiply";
-  layerCtx.globalAlpha = .32;
-  layerCtx.drawImage(img, 0, 0);
+  layerCtx.globalCompositeOperation = "destination-in";
+  layerCtx.drawImage(mask, 0, 0);
+  layerCtx.globalCompositeOperation = "source-over";
   return layer;
 }
 
-function topSeparationLayer(img) {
-  const layer = document.createElement("canvas");
-  layer.width = canvas.width; layer.height = canvas.height;
-  const layerCtx = layer.getContext("2d");
-  const offsets = [[-2,0],[2,0],[0,-2],[0,2],[-1,-1],[1,-1],[-1,1],[1,1]];
-
-  offsets.forEach(([x, y]) => layerCtx.drawImage(img, x, y));
-  layerCtx.globalCompositeOperation = "source-in";
-  layerCtx.fillStyle = "rgba(10,8,6,.68)";
-  layerCtx.fillRect(0, 0, layer.width, layer.height);
-  layerCtx.globalCompositeOperation = "destination-out";
-  layerCtx.drawImage(img, 0, 0);
-  return layer;
+function textureForWood(wood, color) {
+  if (wood === "Klon falisty") return color === "natural" ? images.mapleNatural : images.mapleEnhanced;
+  if (wood === "Topola czeczot") return images.poplarBurl;
+  if (wood === "Mahoń") return images.mahogany;
+  if (wood === "Orzech amerykański") return images.americanWalnut;
+  return images.europeanWalnut;
 }
 
-function woodLayer(img, color, wood, finish = "Mat") {
-  const layer = document.createElement("canvas");
-  layer.width = canvas.width; layer.height = canvas.height;
-  const layerCtx = layer.getContext("2d");
-  const solid = wood === "Jednolity kolor";
+function drawCoverTexture(targetCtx, texture, wood) {
+  const rotate = wood !== "Topola czeczot";
+  targetCtx.save();
+  targetCtx.filter = wood === "Klon falisty" ? "contrast(1.45) brightness(.68)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
 
-  const textureMap = {
-    "Klon falisty": images.flameMaple,
-    "Topola czeczot": images.poplarBurl,
-    "Orzech włoski": images.europeanWalnut,
-    "Orzech amerykański": images.americanWalnut
-  };
-
-  if (solid) {
-    layerCtx.fillStyle = color === "natural" ? "#171717" : color;
-    layerCtx.fillRect(0, 0, layer.width, layer.height);
+  if (rotate) {
+    const rotatedW = canvas.height;
+    const rotatedH = canvas.width;
+    const scale = Math.max(rotatedW / texture.width, rotatedH / texture.height);
+    const drawW = texture.width * scale;
+    const drawH = texture.height * scale;
+    targetCtx.translate(canvas.width, 0);
+    targetCtx.rotate(Math.PI / 2);
+    targetCtx.drawImage(texture, (rotatedW - drawW) / 2, (rotatedH - drawH) / 2, drawW, drawH);
   } else {
-    const texture = wood === "Klon falisty"
-      ? (color === "natural" ? images.mapleNatural : images.mapleEnhanced)
-      : wood === "Topola czeczot"
-        ? images.poplarBurlCustom
-        : (textureMap[wood] || images.flameMaple);
-    const vividWood = wood === "Klon falisty" || wood === "Topola czeczot";
-    if (vividWood) layerCtx.filter = "contrast(1.32) brightness(.78)";
-    const rotateTexture = wood === "Klon falisty" || wood === "Orzech włoski" || wood === "Orzech amerykański";
-    if (wood === "Klon falisty") {
-      const sourceX = Math.round(texture.width * .072);
-      const sourceY = Math.round(texture.height * .02);
-      const sourceWidth = Math.round(texture.width * .858);
-      const sourceHeight = Math.round(texture.height * .956);
-      const rotatedWidth = layer.height;
-      const rotatedHeight = layer.width;
-      const scale = Math.max(rotatedWidth / sourceWidth, rotatedHeight / sourceHeight);
-      const drawWidth = sourceWidth * scale;
-      const drawHeight = sourceHeight * scale;
-      layerCtx.save();
-      layerCtx.translate(layer.width, 0);
-      layerCtx.rotate(Math.PI / 2);
-      layerCtx.drawImage(
-        texture,
-        sourceX, sourceY, sourceWidth, sourceHeight,
-        (rotatedWidth - drawWidth) / 2, (rotatedHeight - drawHeight) / 2,
-        drawWidth, drawHeight
-      );
-      layerCtx.restore();
-    } else if (wood === "Topola czeczot") {
-      const sourceX = Math.round(texture.width * .12);
-      const sourceY = Math.round(texture.height * .05);
-      const sourceWidth = Math.round(texture.width * .76);
-      const sourceHeight = Math.round(texture.height * .9);
-      const scale = Math.max(layer.width / sourceWidth, layer.height / sourceHeight);
-      const drawWidth = sourceWidth * scale;
-      const drawHeight = sourceHeight * scale;
-      layerCtx.drawImage(
-        texture,
-        sourceX, sourceY, sourceWidth, sourceHeight,
-        (layer.width - drawWidth) / 2, (layer.height - drawHeight) / 2,
-        drawWidth, drawHeight
-      );
-    } else if (rotateTexture) {
-      const targetWidth = 1040;
-      const targetHeight = texture.width * (targetWidth / texture.height);
-      layerCtx.save();
-      layerCtx.translate(layer.width, 0);
-      layerCtx.rotate(Math.PI / 2);
-      for (let y = -layer.width; y < layer.height + layer.width; y += targetHeight) {
-        for (let x = 0; x < layer.width; x += targetWidth) {
-          layerCtx.drawImage(texture, y, x, targetHeight, targetWidth);
-        }
-      }
-      layerCtx.restore();
-    } else {
-      const targetHeight = layer.height;
-      const targetWidth = texture.width * (targetHeight / texture.height);
-      for (let x = 0; x < layer.width; x += targetWidth) {
-        layerCtx.drawImage(texture, x, 0, targetWidth, targetHeight);
-      }
-    }
-    layerCtx.filter = "none";
-    if (color !== "natural") {
-      layerCtx.globalCompositeOperation = "color";
-      layerCtx.globalAlpha = vividWood ? 1 : .9;
-      layerCtx.fillStyle = color;
-      layerCtx.fillRect(0, 0, layer.width, layer.height);
-      if (vividWood) {
-        layerCtx.globalCompositeOperation = "source-over";
-        layerCtx.globalAlpha = .38;
-        layerCtx.fillStyle = color;
-        layerCtx.fillRect(0, 0, layer.width, layer.height);
-      }
-      layerCtx.globalCompositeOperation = "multiply";
-      layerCtx.globalAlpha = vividWood ? .34 : .28;
-      layerCtx.fillStyle = color;
-      layerCtx.fillRect(0, 0, layer.width, layer.height);
-    }
+    const scale = Math.max(canvas.width / texture.width, canvas.height / texture.height);
+    const drawW = texture.width * scale;
+    const drawH = texture.height * scale;
+    targetCtx.drawImage(texture, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
+  }
+
+  targetCtx.restore();
+}
+
+function woodLayer(mask, color, wood, finish) {
+  if (wood === "Jednolity kolor") return solidLayer(mask, color);
+
+  const layer = createCanvas();
+  const layerCtx = layer.getContext("2d");
+  const texture = textureForWood(wood, color);
+  drawCoverTexture(layerCtx, texture, wood);
+
+  if (color !== "natural") {
+    const vivid = wood === "Klon falisty" || wood === "Topola czeczot";
+    layerCtx.globalCompositeOperation = "color";
+    layerCtx.globalAlpha = vivid ? .95 : .78;
+    layerCtx.fillStyle = color;
+    layerCtx.fillRect(0, 0, layer.width, layer.height);
+    layerCtx.globalCompositeOperation = "multiply";
+    layerCtx.globalAlpha = vivid ? .24 : .18;
+    layerCtx.fillRect(0, 0, layer.width, layer.height);
   }
 
   layerCtx.globalCompositeOperation = "source-over";
   if (finish === "Gloss") {
-    const shine = layerCtx.createLinearGradient(0, 100, 0, 620);
-    shine.addColorStop(0, "rgba(255,255,255,.12)");
-    shine.addColorStop(.28, "rgba(255,255,255,.025)");
-    shine.addColorStop(.62, "rgba(0,0,0,.06)");
-    shine.addColorStop(1, "rgba(255,255,255,.08)");
-    layerCtx.globalAlpha = 1;
+    const shine = layerCtx.createLinearGradient(0, 420, 0, 1420);
+    shine.addColorStop(0, "rgba(255,255,255,.14)");
+    shine.addColorStop(.42, "rgba(255,255,255,.02)");
+    shine.addColorStop(.62, "rgba(0,0,0,.12)");
+    shine.addColorStop(1, "rgba(255,255,255,.12)");
     layerCtx.fillStyle = shine;
     layerCtx.fillRect(0, 0, layer.width, layer.height);
+  } else {
+    layerCtx.globalAlpha = .16;
+    layerCtx.fillStyle = "#111";
+    layerCtx.fillRect(0, 0, layer.width, layer.height);
+    layerCtx.globalAlpha = 1;
   }
 
-  layerCtx.globalAlpha = 1;
   layerCtx.globalCompositeOperation = "destination-in";
-  layerCtx.drawImage(img, 0, 0);
+  layerCtx.drawImage(mask, 0, 0);
+  layerCtx.globalCompositeOperation = "source-over";
   return layer;
 }
 
-function drawFrets() {
-  const fretPositions = [752, 771, 793, 818, 845, 875, 906, 940, 977, 1016, 1059, 1105, 1154, 1208, 1266, 1330, 1400, 1477];
-  ctx.save();
-  fretPositions.forEach((x, index) => {
-    const progress = index / (fretPositions.length - 1);
-    const top = 321 + progress * 8;
-    const bottom = 410 - progress * 9;
-    const gradient = ctx.createLinearGradient(x - 2, 0, x + 2, 0);
-    gradient.addColorStop(0, "rgba(80,80,78,.8)");
-    gradient.addColorStop(.45, "rgba(245,241,224,.95)");
-    gradient.addColorStop(1, "rgba(92,91,87,.85)");
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = fieldValue("fretMaterial") === "Stal nierdzewna" ? 3 : 2.4;
-    ctx.beginPath();
-    ctx.moveTo(x, top);
-    ctx.lineTo(x, bottom);
-    ctx.stroke();
-  });
-  ctx.restore();
+function tintOriginalLayer(img, mask, color, strength = .68) {
+  const layer = createCanvas();
+  const layerCtx = layer.getContext("2d");
+  drawMaskedBase(layerCtx, img, mask);
+  layerCtx.globalCompositeOperation = "source-atop";
+  layerCtx.globalAlpha = strength;
+  layerCtx.fillStyle = color;
+  layerCtx.fillRect(0, 0, layer.width, layer.height);
+  layerCtx.globalAlpha = 1;
+  layerCtx.globalCompositeOperation = "source-over";
+  return layer;
 }
 
-function drawFretLayer() {
-  // Odniesienie służy tylko do relacji progów względem korpusu.
-  const referenceBounds = { x: 318, y: 114, width: 607, height: 455 };
-  const guitarBounds = { x: 197, y: 100, width: 703, height: 527 };
-  const scaleX = guitarBounds.width / referenceBounds.width;
-  const scaleY = guitarBounds.height / referenceBounds.height;
-  const offsetX = guitarBounds.x - referenceBounds.x * scaleX;
-  const offsetY = guitarBounds.y - referenceBounds.y * scaleY;
+async function loadInventory() {
+  try {
+    const response = await fetch(inventoryPath, { cache: "no-store" });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (error) {
+    console.warn("Nie udalo sie wczytac dostepnosci materialow:", error);
+    return null;
+  }
+}
 
-  ctx.save();
-  ctx.setTransform(scaleX, 0, 0, scaleY, offsetX, offsetY);
-  ctx.drawImage(images.frets, 0, 0);
-  ctx.restore();
+function applyAvailabilityForGroup(inputName, entries = {}) {
+  const inputs = Array.from(form.querySelectorAll(`input[name="${inputName}"]`));
+  let selectedWasDisabled = false;
+
+  inputs.forEach(input => {
+    const item = entries[input.value];
+    const available = item?.available !== false;
+    const label = input.closest(".choice");
+    const note = item?.note || "Chwilowo niedostepne";
+
+    input.disabled = !available;
+    if (!label) return;
+
+    label.classList.toggle("unavailable", !available);
+    label.setAttribute("aria-disabled", available ? "false" : "true");
+    label.querySelector(".availability-note")?.remove();
+
+    if (!available) {
+      label.insertAdjacentHTML("beforeend", `<em class="availability-note">${note}</em>`);
+      if (input.checked) selectedWasDisabled = true;
+    }
+  });
+
+  if (selectedWasDisabled) {
+    const fallback = inputs.find(input => !input.disabled);
+    if (fallback) {
+      fallback.checked = true;
+      form.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }
+}
+
+function applyInventory(inventory) {
+  if (!inventory?.woods) return;
+  applyAvailabilityForGroup("topWood", inventory.woods.top);
+  applyAvailabilityForGroup("sideWood", inventory.woods.sides);
+  updateSummary();
+}
+
+function bodyBaseLayer() {
+  const finish = fieldValue("bodyFinish");
+  const wood = fieldValue("bodyWood");
+  let color = wood === "Jesion" ? "#b28d62" : "#7b4632";
+  let strength = finish === "Olejowosk" ? .22 : .34;
+
+  if (finish === "Czarny mat") {
+    color = "#0b0b0b";
+    strength = .9;
+  }
+  if (finish === "Czarny metalik") {
+    color = "#1d1f22";
+    strength = .86;
+  }
+
+  const layer = tintOriginalLayer(images.body, masks.body, color, strength);
+  const layerCtx = layer.getContext("2d");
+
+  if (finish === "Czarny metalik") {
+    const metal = layerCtx.createLinearGradient(0, 880, 0, 1500);
+    metal.addColorStop(0, "rgba(255,255,255,.08)");
+    metal.addColorStop(.55, "rgba(255,255,255,.015)");
+    metal.addColorStop(1, "rgba(255,255,255,.06)");
+    layerCtx.globalCompositeOperation = "source-atop";
+    layerCtx.fillStyle = metal;
+    layerCtx.fillRect(0, 0, layer.width, layer.height);
+    layerCtx.globalCompositeOperation = "source-over";
+  }
+
+  return layer;
+}
+
+function fretboardLayer() {
+  const selected = form.querySelector('[name="fretboard"]:checked');
+  return tintOriginalLayer(images.fretboard, masks.fretboard, selected?.dataset.color || "#181513", .74);
+}
+
+function bindingLayer() {
+  const selected = form.querySelector('[name="binding"]:checked');
+  return tintOriginalLayer(images.binding, masks.binding, selected?.dataset.color || "#CEC0A4", .72);
+}
+
+function headLayer(topColor, sideColor, topWood, sideWood) {
+  const mode = fieldValue("headMode");
+  const finish = fieldValue("headFinish");
+
+  if (mode === "Jak top") return woodLayer(masks.head, topColor, topWood, finish);
+  if (mode === "Jak boki") return woodLayer(masks.head, sideColor, sideWood, finish);
+  return tintOriginalLayer(images.head, masks.head, "#050505", .92);
+}
+
+function nutLayer() {
+  const colors = {
+    "Kość": "#e7dcc0",
+    "Mosiądz": "#b8872f",
+    "TUSQ": "#f1eee3",
+    "Róg czarny": "#0b0b0b"
+  };
+  return tintOriginalLayer(images.nut, masks.nut, colors[fieldValue("nut")] || "#e7dcc0", .68);
+}
+
+function metalFinish(name) {
+  return {
+    "Chrom": { color: "#dfe5e4", strength: .58, dark: "#596062", mid: "#aeb7b7", light: "#ffffff" },
+    "Nikiel": { color: "#bbb5a8", strength: .58, dark: "#635f58", mid: "#aaa59b", light: "#f1eadc" },
+    "Czarny": { color: "#070707", strength: .88, dark: "#020202", mid: "#303030", light: "#777777" },
+    "Złoty": { color: "#d2a23a", strength: .72, dark: "#684911", mid: "#b98520", light: "#ffd978" }
+  }[name] || { color: "#dfe5e4", strength: .58, dark: "#596062", mid: "#aeb7b7", light: "#ffffff" };
+}
+
+function hardwareLayer() {
+  const finish = metalFinish(fieldValue("hardwareColor"));
+  const layer = tintOriginalLayer(images.hardware, masks.hardware, finish.color, finish.strength);
+  const layerCtx = layer.getContext("2d");
+  const shine = layerCtx.createLinearGradient(0, 1040, 0, 1540);
+  shine.addColorStop(0, "rgba(255,255,255,.16)");
+  shine.addColorStop(.42, "rgba(255,255,255,.02)");
+  shine.addColorStop(.72, "rgba(0,0,0,.22)");
+  shine.addColorStop(1, "rgba(255,255,255,.08)");
+  layerCtx.globalCompositeOperation = "source-atop";
+  layerCtx.fillStyle = shine;
+  layerCtx.fillRect(0, 0, layer.width, layer.height);
+  layerCtx.globalCompositeOperation = "source-over";
+  return layer;
+}
+
+function knobsLayer() {
+  const finish = metalFinish(fieldValue("knobColor"));
+  return tintOriginalLayer(images.knobs, masks.knobs, finish.color, finish.strength);
 }
 
 function roundedRectPath(context, x, y, width, height, radius) {
@@ -257,212 +436,289 @@ function roundedRectPath(context, x, y, width, height, radius) {
   context.roundRect(x, y, width, height, radius);
 }
 
-function drawPickup(x, y, width, height, variant) {
-  ctx.save();
-  if (variant === "Czarne bez puszek" || variant === "Chromowana ramka z czarnym środkiem") {
-    if (variant === "Chromowana ramka z czarnym środkiem") {
-      roundedRectPath(ctx, x, y, width, height, 7);
-      const frame = ctx.createLinearGradient(x, y, x + width, y);
-      frame.addColorStop(0, "#5e6466"); frame.addColorStop(.5, "#edf1f0"); frame.addColorStop(1, "#6f7476");
-      ctx.fillStyle = frame; ctx.fill();
-      roundedRectPath(ctx, x + 5, y + 5, width - 10, height - 10, 5);
-      ctx.fillStyle = "#080808"; ctx.fill();
-    }
-    const gap = 4;
-    const inset = variant === "Chromowana ramka z czarnym środkiem" ? 8 : 0;
-    const coilY = y + inset;
-    const coilHeight = height - inset * 2;
-    const coilWidth = (width - inset * 2 - gap) / 2;
-    [x + inset, x + inset + coilWidth + gap].forEach((coilX, coilIndex) => {
-      roundedRectPath(ctx, coilX, coilY, coilWidth, coilHeight, 7);
-      const coilGradient = ctx.createLinearGradient(coilX, y, coilX + coilWidth, y);
-      coilGradient.addColorStop(0, "#050505");
-      coilGradient.addColorStop(.5, "#242424");
-      coilGradient.addColorStop(1, "#070707");
-      ctx.fillStyle = coilGradient;
-      ctx.fill();
-      ctx.strokeStyle = variant === "Chromowana ramka z czarnym środkiem" ? "rgba(255,255,255,.3)" : "rgba(255,255,255,.12)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+function pickupPlateLayer() {
+  const frame = metalFinish(fieldValue("pickupFrameColor"));
+  const center = metalFinish(fieldValue("pickupCenterColor"));
+  const magnet = { dark: "#687073", mid: "#9aa3a5", light: "#d3d8d9" };
+  const layer = createCanvas();
+  const layerCtx = layer.getContext("2d");
+  const pickups = [
+    { x: 541, y: 1108, width: 100, height: 42 },
+    { x: 541, y: 1250, width: 100, height: 42 }
+  ];
+
+  pickups.forEach(pickup => {
+    roundedRectPath(layerCtx, pickup.x, pickup.y, pickup.width, pickup.height, 6);
+    const frameGradient = layerCtx.createLinearGradient(pickup.x, pickup.y, pickup.x + pickup.width, pickup.y);
+    frameGradient.addColorStop(0, frame.dark);
+    frameGradient.addColorStop(.5, frame.light);
+    frameGradient.addColorStop(1, frame.mid);
+    layerCtx.fillStyle = frameGradient;
+    layerCtx.fill();
+
+    roundedRectPath(layerCtx, pickup.x + 8, pickup.y + 7, pickup.width - 16, pickup.height - 14, 4);
+    const centerGradient = layerCtx.createLinearGradient(pickup.x, pickup.y, pickup.x, pickup.y + pickup.height);
+    centerGradient.addColorStop(0, center.light);
+    centerGradient.addColorStop(.18, center.mid);
+    centerGradient.addColorStop(1, center.dark);
+    layerCtx.fillStyle = centerGradient;
+    layerCtx.fill();
+
+    layerCtx.globalAlpha = center.color === "#070707" ? .34 : .13;
+    layerCtx.fillStyle = "#000";
+    layerCtx.fillRect(pickup.x + 8, pickup.y + 7, pickup.width - 16, pickup.height - 14);
+    layerCtx.globalAlpha = 1;
+
+    for (let row = 0; row < 2; row += 1) {
       for (let pole = 0; pole < 6; pole += 1) {
-        const poleY = coilY + 12 + pole * ((coilHeight - 24) / 5);
-        ctx.beginPath();
-        ctx.arc(coilX + coilWidth / 2, poleY, 2.6, 0, Math.PI * 2);
-        ctx.fillStyle = coilIndex === 0 ? "#b9b8b2" : "#55534f";
-        ctx.fill();
+        const cx = pickup.x + 10 + pole * 17;
+        const cy = pickup.y + 10 + row * 27;
+        layerCtx.beginPath();
+        layerCtx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+        layerCtx.fillStyle = magnet.light;
+        layerCtx.fill();
+        layerCtx.beginPath();
+        layerCtx.arc(cx, cy, 2.4, 0, Math.PI * 2);
+        layerCtx.fillStyle = magnet.mid;
+        layerCtx.fill();
       }
-    });
-  } else {
-    const palette = variant.includes("złotych")
-      ? ["#8b6418", "#f0cc68", "#a9781d"]
-      : variant.includes("niklowych")
-        ? ["#666b6d", "#e8eceb", "#777c7e"]
-        : ["#060606", "#343434", "#080808"];
-    roundedRectPath(ctx, x, y, width, height, 6);
-    const cover = ctx.createLinearGradient(x, y, x + width, y);
-    cover.addColorStop(0, palette[0]); cover.addColorStop(.5, palette[1]); cover.addColorStop(1, palette[2]);
-    ctx.fillStyle = cover;
-    ctx.fill();
-    ctx.strokeStyle = variant.includes("czarnych") ? "#555" : "rgba(255,255,255,.48)";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    for (let pole = 0; pole < 6; pole += 1) {
-      const poleY = y + 12 + pole * ((height - 24) / 5);
-      ctx.beginPath();
-      ctx.arc(x + width * .58, poleY, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = variant.includes("czarnych") ? "#777" : "#55524c";
-      ctx.fill();
     }
-  }
-  ctx.restore();
-}
-
-function drawPickups() {
-  const variant = fieldValue("pickups");
-  drawPickup(571, 303, 65, 124, variant);
-  drawPickup(715, 304, 64, 122, variant);
-}
-
-function hardwarePalette() {
-  const color = fieldValue("hardwareColor");
-  if (color === "Złoty") return ["#735112", "#f0cf70", "#9d701d"];
-  if (color === "Czarny") return ["#050505", "#3a3a3a", "#090909"];
-  if (color === "Satynowy nikiel") return ["#696b68", "#babbb5", "#747570"];
-  return ["#5c6265", "#f1f4f3", "#747a7c"];
-}
-
-function drawGotohBridge() {
-  if (fieldValue("bridge") !== "Tune-o-matic Gotoh") return;
-  const [dark, light, mid] = hardwarePalette();
-  const x = 519, y = 301, width = 40, height = 136;
-  ctx.save();
-  roundedRectPath(ctx, x, y + 8, width, height - 16, 12);
-  const metal = ctx.createLinearGradient(x, y, x + width, y);
-  metal.addColorStop(0, dark); metal.addColorStop(.45, light); metal.addColorStop(1, mid);
-  ctx.fillStyle = metal; ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,.42)"; ctx.lineWidth = 1.5; ctx.stroke();
-  [y + 8, y + height - 8].forEach(postY => {
-    ctx.beginPath(); ctx.arc(x + width / 2, postY, 9, 0, Math.PI * 2);
-    ctx.fillStyle = metal; ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.arc(x + width / 2, postY, 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = dark; ctx.fill();
   });
-  for (let string = 0; string < 6; string += 1) {
-    const saddleY = y + 28 + string * 16;
-    ctx.fillStyle = string % 2 ? mid : light;
-    ctx.fillRect(x + 8, saddleY, width - 16, 9);
-    ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.strokeRect(x + 8, saddleY, width - 16, 9);
-    ctx.beginPath(); ctx.arc(x + width / 2, saddleY + 4.5, 2, 0, Math.PI * 2);
-    ctx.fillStyle = dark; ctx.fill();
-  }
+
+  return layer;
+}
+
+function drawFrameOnly(index) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const frame = images[`frame${index}`] || images.frame0;
+  const mask = masks[`frame${index}`] || masks.frame0;
+  drawMaskedBase(ctx, frame, mask);
+  drawReferenceBadge();
+}
+
+function drawReferenceBadge() {
+  const text = "Ujęcie referencyjne. Konfiguracja materiałów jest składana na froncie.";
+  ctx.save();
+  ctx.fillStyle = "rgba(17, 16, 14, .72)";
+  ctx.strokeStyle = "rgba(214, 168, 116, .55)";
+  ctx.lineWidth = 2;
+  ctx.roundRect(318, 1440, 644, 54, 10);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "#e7d7bf";
+  ctx.font = "600 21px Manrope, Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 640, 1467);
   ctx.restore();
 }
 
-function drawCanvas() {
-  if (!images.body) return;
+function drawConfiguredFront() {
   const topColor = document.querySelector("#topColor").value;
   const sideColor = document.querySelector("#sideColor").value;
-  const finish = fieldValue("finish");
   const topWood = fieldValue("topWood");
   const sideWood = fieldValue("sideWood");
-  const bodyFinish = fieldValue("bodyFinish");
-  const bindingInput = form.querySelector('[name="binding"]:checked');
-  const fretboardInput = form.querySelector('[name="fretboard"]:checked');
-  const headInput = form.querySelector('[name="head"]:checked');
-  const headColor = headInput.dataset.color === "match" ? topColor : headInput.dataset.color;
-  let bodyColor = fieldValue("bodyWood") === "Jesion" ? "#a78661" : "#6b372a";
-  let bodyStrength = bodyFinish === "Olejowosk" ? .28 : .42;
-  if (bodyFinish === "Czarny mat") { bodyColor = "#121212"; bodyStrength = .9; }
-  if (bodyFinish === "Czarny metalik") { bodyColor = "#242528"; bodyStrength = .88; }
+
+  const model = createCanvas();
+  const modelCtx = model.getContext("2d");
+  modelCtx.drawImage(bodyBaseLayer(), 0, 0);
+  modelCtx.drawImage(woodLayer(masks.sides, sideColor, sideWood, fieldValue("sideFinish")), 0, 0);
+  modelCtx.save();
+  modelCtx.shadowColor = "rgba(0,0,0,.45)";
+  modelCtx.shadowBlur = 10;
+  modelCtx.shadowOffsetX = 3;
+  modelCtx.drawImage(woodLayer(masks.top, topColor, topWood, fieldValue("topFinish")), 0, 0);
+  modelCtx.restore();
+  modelCtx.drawImage(headLayer(topColor, sideColor, topWood, sideWood), 0, 0);
+  modelCtx.drawImage(fretboardLayer(), 0, 0);
+  modelCtx.drawImage(bindingLayer(), 0, 0);
+  modelCtx.drawImage(hardwareLayer(), 0, 0);
+  modelCtx.drawImage(knobsLayer(), 0, 0);
+  modelCtx.drawImage(pickupPlateLayer(), 0, 0);
+  modelCtx.drawImage(nutLayer(), 0, 0);
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(tintedLayer(images.body, bodyColor, bodyStrength), 0, 0);
-  ctx.drawImage(woodLayer(images.sides, sideColor, sideWood, finish), 0, 0);
-  drawPickups();
-  drawGotohBridge();
-  const topLayer = woodLayer(images.top, topColor, topWood, finish);
   ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,.72)";
-  ctx.shadowBlur = 8;
-  ctx.shadowOffsetY = 3;
-  ctx.drawImage(topLayer, 0, 0);
+  ctx.shadowColor = "rgba(0,0,0,.7)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 16;
+  drawTransformedLayer(ctx, model);
   ctx.restore();
-  ctx.drawImage(topSeparationLayer(images.top), 0, 0);
-  ctx.drawImage(topLayer, 0, 0);
-  ctx.drawImage(images.neck, 0, 0);
-  ctx.drawImage(tintedLayer(images.fretboard, fretboardInput.dataset.color, .62), 0, 0);
-  drawFretLayer();
-  ctx.drawImage(headInput.dataset.color === "match" ? woodLayer(images.head, headColor, topWood, finish) : woodLayer(images.head, headColor, "Jednolity kolor", finish), 0, 0);
-  ctx.drawImage(tintedLayer(images.binding, bindingInput.dataset.color, .58), 0, 0);
+}
 
-  canvas.style.filter = "drop-shadow(0 22px 30px #0009)";
+function drawCanvas(force = false) {
+  if (!force && viewer3dReady && !stageWrap?.classList.contains("viewer-3d-fallback")) return;
+
+  const degrees = Number(frameSlider.value) || 0;
+  const index = Math.round(degrees / 45) % 8;
+  if (index === 0) drawConfiguredFront();
+  else drawFrameOnly(index);
+
+  const zoom = 1.18 + Number(zoomSlider.value) / 160;
+  canvas.style.transform = `scale(${zoom})`;
 }
 
 function updateSummary() {
   const data = new FormData(form);
-  const colorName = value => finishColors.find(([, color]) => color === value)?.[0] || value;
-  const items = [
-    ["Korpus", data.get("bodyWood")], ["Wykończenie korpusu", data.get("bodyFinish")],
-    ["Top", data.get("topWood")], ["Kolor topu", colorName(data.get("topColor"))], ["Boki", data.get("sideWood")],
-    ["Kolor boków", colorName(data.get("sideColor"))], ["Wykończenie topu, boków i główki", data.get("finish")],
-    ["Binding", data.get("binding")], ["Główka", data.get("head")],
-    ["Podstrunnica", data.get("fretboard")], ["Markery", data.get("markers")], ["Menzura / progi", `${data.get("scale")} / ${data.get("fretCount")}`],
-    ["Materiał progów", data.get("fretMaterial")], ["Rozmiar progów", data.get("fretSize")],
-    ["Elektronika", data.get("electronicsLayout")], ["Pickupy", data.get("pickups")], ["Mostek", data.get("bridge")],
-    ["Kolor osprzętu", data.get("hardwareColor")], ["Klucze", data.get("tuners")], ["Siodełko", data.get("nut")],
-    ["Straplocki", data.get("straplocks")], ["Modyfikacje", data.get("modifications") || "Brak"]
+  const topColor = selectedColorName(data.get("topColor"));
+  const sideColor = selectedColorName(data.get("sideColor"));
+  const rows = [
+    ["Top", `${data.get("topWood")} / ${topColor} / ${data.get("topFinish")}`],
+    ["Boki", `${data.get("sideWood")} / ${sideColor} / ${data.get("sideFinish")}`],
+    ["Podstrunnica", `${data.get("fretboard")} / markery ${data.get("binding")} / progi ${data.get("fretMaterial")}`],
+    ["Drewno korpusu", `${data.get("bodyWood")} / ${data.get("bodyFinish")}`],
+    ["Kształt bindingu", data.get("bindingShape")],
+    ["Kolor bindingu i markerów", data.get("binding")],
+    ["Kolor osprzętu", data.get("hardwareColor")],
+    ["Kolor gałek", data.get("knobColor")],
+    ["Układ elektroniki", data.get("electronicsLayout")],
+    ["Główka", `${data.get("headMode")} / ${data.get("headFinish")}`],
+    ["Pickupy", data.get("pickups")],
+    ["Ramka pickupów", data.get("pickupFrameColor")],
+    ["Środek pickupów", data.get("pickupCenterColor")],
+    ["Magnesy pickupów", data.get("pickupMagnetColor")],
+    ["Mostek", data.get("bridge")],
+    ["Klucze", data.get("tuners")],
+    ["Siodełko", data.get("nut")],
+    ["Straplocki", data.get("straplocks")],
+    ["Menzura / liczba progów", `${data.get("scale")} / ${data.get("fretCount")}`],
+    ["Rozmiar progów", data.get("fretSize")],
+    ["Modyfikacje", data.get("modifications") || "Brak"]
   ];
-  document.querySelector("#summaryList").innerHTML = items.map(([label, value]) => `<div class="summary-row"><span>${label}</span><strong>${value}</strong></div>`).join("");
-  document.querySelector("#previewFinish").textContent = data.get("finish");
-  document.querySelector("#previewTop").textContent = data.get("topWood");
+
+  document.querySelector("#summaryList").innerHTML = rows.map(([label, value]) => `<div class="summary-row"><span>${label}</span><strong>${value}</strong></div>`).join("");
+  document.querySelector("#previewTop").textContent = `${data.get("topWood")} / ${topColor}`;
+  document.querySelector("#previewSides").textContent = `${data.get("sideWood")} / ${sideColor}`;
+  document.querySelector("#previewHardware").textContent = data.get("hardwareColor");
 }
 
-function setTab(index) {
-  activeTab = Math.max(0, Math.min(tabs.length - 1, index));
-  document.querySelectorAll(".tab").forEach((tab, i) => tab.classList.toggle("active", i === activeTab));
-  document.querySelectorAll(".tab-panel").forEach((panel, i) => panel.classList.toggle("active", i === activeTab));
-  const stepCount = document.querySelector(".step-count");
-  if (stepCount) stepCount.textContent = `${String(activeTab + 1).padStart(2,"0")} / 06`;
-  document.querySelector("#prevButton").classList.toggle("hidden", activeTab === 0);
-  document.querySelector("#nextButton").classList.toggle("hidden", activeTab === tabs.length - 1);
-  if (tabs[activeTab] === "summary") updateSummary();
-  if (window.innerWidth < 1050) document.querySelector(".controls-panel").scrollIntoView({behavior:"smooth"});
+function showToast(message, duration = 4200) {
+  const toast = document.querySelector("#toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), duration);
+}
+
+function getSummaryItems() {
+  return Array.from(document.querySelectorAll("#summaryList .summary-row")).map(row => ({
+    label: row.querySelector("span")?.textContent?.trim() || "",
+    value: row.querySelector("strong")?.textContent?.trim() || ""
+  }));
 }
 
 function resetForm() {
   form.reset();
   document.querySelector("#topColor").value = defaults.topColor;
   document.querySelector("#sideColor").value = defaults.sideColor;
-  renderFinishColors("#topColorChoices", "topColor", defaults.topColor);
-  renderFinishColors("#sideColorChoices", "sideColor", defaults.sideColor);
-  drawCanvas(); updateSummary(); setTab(0);
+  frameSlider.value = "0";
+  zoomSlider.value = "0";
+  renderPalettes();
+  window.weirdoViewer3d?.rerender?.();
+  drawCanvas();
+  updateSummary();
 }
 
-form.addEventListener("input", () => {
-  drawCanvas(); updateSummary();
-});
+function moveFrame(delta) {
+  const next = (Number(frameSlider.value) + delta * 45 + 360) % 360;
+  frameSlider.value = String(next);
+  drawCanvas();
+  frameSlider.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+renderPalettes();
+
 document.addEventListener("click", event => {
   const colorButton = event.target.closest(".finish-color");
   if (!colorButton) return;
   const input = document.querySelector(`#${colorButton.dataset.target}`);
   input.value = colorButton.dataset.color;
-  colorButton.parentElement.querySelectorAll(".finish-color").forEach(button => button.classList.toggle("active", button === colorButton));
-  drawCanvas(); updateSummary();
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  window.weirdoViewer3d?.rerender?.();
+  colorButton.parentElement.querySelectorAll(".finish-color").forEach(button => {
+    button.classList.toggle("active", button === colorButton);
+  });
+  if (!viewer3dReady || stageWrap?.classList.contains("viewer-3d-fallback")) drawCanvas();
+  updateSummary();
 });
-form.addEventListener("change", () => { drawCanvas(); updateSummary(); });
-form.addEventListener("submit", event => {
-  event.preventDefault();
-  const toast = document.querySelector("#toast");
-  toast.textContent = "Konfiguracja jest gotowa do podłączenia pod formularz strony Weirdo.";
-  toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 3500);
+
+form.addEventListener("input", () => {
+  if (!viewer3dReady || stageWrap?.classList.contains("viewer-3d-fallback")) drawCanvas();
+  updateSummary();
 });
-document.querySelectorAll(".tab").forEach((tab, index) => tab.addEventListener("click", () => setTab(index)));
-document.querySelector("#nextButton").addEventListener("click", () => setTab(activeTab + 1));
-document.querySelector("#prevButton").addEventListener("click", () => setTab(activeTab - 1));
+
+form.addEventListener("change", () => {
+  if (!viewer3dReady || stageWrap?.classList.contains("viewer-3d-fallback")) drawCanvas();
+  updateSummary();
+});
+
+frameSlider.addEventListener("input", drawCanvas);
+zoomSlider.addEventListener("input", drawCanvas);
+document.querySelector("#prevFrame").addEventListener("click", () => moveFrame(-1));
+document.querySelector("#nextFrame").addEventListener("click", () => moveFrame(1));
 document.querySelector("#resetButton").addEventListener("click", resetForm);
 
-loadImages().then(() => {
+window.addEventListener("weirdo:viewer3d-ready", () => {
+  viewer3dReady = true;
+  stageWrap?.classList.add("viewer-3d-ready");
+  stageWrap?.classList.remove("viewer-3d-fallback");
   loading.hidden = true;
-  drawCanvas(); updateSummary();
-}).catch(() => { loading.textContent = "Nie udało się wczytać warstw wizualizacji."; });
+});
+
+window.addEventListener("weirdo:viewer3d-failed", event => {
+  stageWrap?.classList.add("viewer-3d-fallback");
+  loading.hidden = true;
+  drawCanvas(true);
+  console.warn("PodglÄ…d 3D nie wystartowaĹ‚, pokazujÄ™ fallback 2D.", event.detail?.error);
+});
+
+window.setTimeout(() => {
+  if (viewer3dReady) return;
+  stageWrap?.classList.add("viewer-3d-fallback");
+  loading.hidden = true;
+  drawCanvas(true);
+}, 8000);
+
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  updateSummary();
+  frameSlider.value = "0";
+  drawCanvas(true);
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  const originalLabel = submitButton.textContent;
+  submitButton.disabled = true;
+  submitButton.textContent = "Wysyłanie...";
+
+  try {
+    const payload = {
+      customerName: form.elements.customerName.value,
+      customerEmail: form.elements.customerEmail.value,
+      website: form.elements.website.value,
+      summary: getSummaryItems(),
+      image: canvas.toDataURL("image/jpeg", .88)
+    };
+
+    const response = await fetch("/api/send-configuration", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Nie udało się wysłać konfiguracji.");
+    showToast("Konfiguracja została wysłana. Skontaktujemy się w sprawie szczegółów.");
+  } catch (error) {
+    showToast(error.message || "Nie udało się wysłać konfiguracji.");
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = originalLabel;
+  }
+});
+
+Promise.all([loadImages(), loadInventory()]).then(([, inventory]) => {
+  applyInventory(inventory);
+  drawCanvas();
+  updateSummary();
+}).catch(error => {
+  loading.textContent = error.message || "Nie udało się wczytać warstw wizualizacji.";
+});
