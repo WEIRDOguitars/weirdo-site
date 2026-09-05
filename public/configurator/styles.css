@@ -952,10 +952,16 @@ textarea {
   }
 
   .viewer-controls {
+    position: fixed;
+    top: var(--mobile-stage-height);
+    left: 0;
+    right: 0;
+    z-index: 9;
     grid-template-columns: 1fr 1fr;
     gap: 7px;
-    padding: 0 12px 12px;
-    margin-top: calc(var(--mobile-stage-height) + 12px);
+    padding: 8px 12px 12px;
+    margin-top: 0;
+    border-bottom: 1px solid var(--line);
     background: #141310;
   }
 
@@ -969,6 +975,7 @@ textarea {
 
   .controls-panel {
     padding: 18px 14px 40px;
+    margin-top: calc(var(--mobile-stage-height) + 72px);
   }
 
   .form-topline {
