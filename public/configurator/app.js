@@ -618,6 +618,17 @@ function resetForm() {
   updateSummary();
 }
 
+function setRadioValue(name, value) {
+  const input = form.querySelector(`input[name="${name}"][value="${value}"]`);
+  if (!input) return;
+  input.checked = true;
+}
+
+function applyHardwarePreset(value) {
+  setRadioValue("knobColor", value);
+  setRadioValue("pickupFrameColor", value);
+}
+
 renderPalettes();
 
 document.addEventListener("click", event => {
@@ -640,7 +651,11 @@ form.addEventListener("input", () => {
   updateSummary();
 });
 
-form.addEventListener("change", () => {
+form.addEventListener("change", event => {
+  if (event.target?.name === "hardwareColor") {
+    applyHardwarePreset(event.target.value);
+    window.weirdoViewer3d?.rerender?.();
+  }
   if (!viewer3dReady || stageWrap?.classList.contains("viewer-3d-fallback")) drawCanvas();
   updateSummary();
 });
