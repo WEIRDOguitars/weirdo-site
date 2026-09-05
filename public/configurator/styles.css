@@ -926,20 +926,30 @@ textarea {
 
 @media (max-width: 720px) {
   .preview-panel {
-    position: sticky;
-    top: 0;
-    max-height: 68dvh;
-    grid-template-rows: auto minmax(220px, 40dvh) auto;
-    padding: 14px 12px;
-    overflow: hidden;
+    display: contents;
+  }
+
+  .brand-header {
+    padding: 12px 14px 10px;
+    background: #141310;
   }
 
   .stage-wrap {
-    min-height: 220px;
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    height: clamp(360px, 62dvh, 560px);
+    min-height: 360px;
+    margin: 0 10px 10px;
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(224, 190, 132, .18) 0, rgba(142, 92, 58, .10) 28%, rgba(255,255,255,.035) 48%, transparent 72%),
+      linear-gradient(180deg, #23211e, #141310 72%);
   }
 
   .viewer-controls {
     grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    padding: 0 12px 14px;
   }
 
   .range-field {
@@ -951,22 +961,42 @@ textarea {
   }
 
   .controls-panel {
-    padding: 22px 14px 40px;
+    padding: 18px 14px 40px;
   }
 
   .form-topline {
-    height: 56px;
-    margin: -22px -14px 22px;
+    height: 48px;
+    margin: -18px -14px 18px;
     padding: 0 14px;
   }
 
+  .form-topline p,
+  legend {
+    font-size: 9px;
+    letter-spacing: .12em;
+  }
+
   .section-heading {
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 16px;
   }
 
   .section-heading h2 {
-    font-size: 29px;
+    font-size: 25px;
+  }
+
+  .section-heading p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .config-block {
+    padding-bottom: 28px;
+    margin-bottom: 28px;
+  }
+
+  fieldset {
+    margin-bottom: 18px;
   }
 
   .choice-grid.two,
@@ -986,12 +1016,38 @@ textarea {
   }
 
   .choice {
-    min-height: 68px;
-    padding: 13px;
+    min-height: 60px;
+    padding: 11px 12px;
+    gap: 10px;
+  }
+
+  .choice strong,
+  .static-choice span {
+    font-size: 12px;
+  }
+
+  .choice small,
+  .static-choice small {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .wood-swatch {
+    width: 34px;
+    height: 42px;
+  }
+
+  .finish-color {
+    min-height: 64px;
+    padding: 7px 5px;
+  }
+
+  .finish-color small {
+    font-size: 8px;
   }
 
   .compact .choice {
-    min-height: 54px;
+    min-height: 50px;
   }
 
   .segmented {
@@ -1005,13 +1061,9 @@ textarea {
 }
 
 @media (max-width: 420px) {
-  .preview-panel {
-    max-height: 64dvh;
-    grid-template-rows: auto 210px auto;
-  }
-
   .stage-wrap {
-    min-height: 210px;
+    height: clamp(330px, 58dvh, 500px);
+    min-height: 330px;
   }
 
   .brand-header img {
