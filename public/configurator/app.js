@@ -618,13 +618,6 @@ function resetForm() {
   updateSummary();
 }
 
-function moveFrame(delta) {
-  const next = (Number(frameSlider.value) + delta * 45 + 360) % 360;
-  frameSlider.value = String(next);
-  drawCanvas();
-  frameSlider.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
 renderPalettes();
 
 document.addEventListener("click", event => {
@@ -654,8 +647,6 @@ form.addEventListener("change", () => {
 
 frameSlider.addEventListener("input", drawCanvas);
 zoomSlider.addEventListener("input", drawCanvas);
-document.querySelector("#prevFrame").addEventListener("click", () => moveFrame(-1));
-document.querySelector("#nextFrame").addEventListener("click", () => moveFrame(1));
 document.querySelector("#resetButton").addEventListener("click", resetForm);
 
 window.addEventListener("weirdo:viewer3d-ready", () => {

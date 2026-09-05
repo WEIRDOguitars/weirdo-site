@@ -189,7 +189,7 @@ legend {
 
 .viewer-controls {
   display: grid;
-  grid-template-columns: auto minmax(160px, 1fr) auto minmax(150px, .8fr);
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, .8fr);
   gap: 12px;
   align-items: end;
 }
@@ -885,7 +885,7 @@ textarea {
   }
 
   .viewer-controls {
-    grid-template-columns: auto minmax(96px, 1fr) auto minmax(96px, 1fr);
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
     gap: 8px;
   }
 
@@ -951,10 +951,6 @@ textarea {
     gap: 7px;
     padding: 0 12px 12px;
     background: #141310;
-  }
-
-  .viewer-controls .ghost-button {
-    display: none;
   }
 
   .range-field {
