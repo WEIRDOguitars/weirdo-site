@@ -503,23 +503,23 @@ legend {
 }
 
 .maple {
-  background-image: url("tekstury/runtime/maple-flame.png");
+  background-image: url("tekstury/thumbs/maple-flame.jpg");
 }
 
 .burl {
-  background-image: url("tekstury/runtime/poplar-burl.png");
+  background-image: url("tekstury/thumbs/poplar-burl.jpg");
 }
 
 .mahogany {
-  background-image: url("tekstury/runtime/mahogany-top.png");
+  background-image: url("tekstury/thumbs/mahogany-top.jpg");
 }
 
 .walnut {
-  background-image: url("tekstury/runtime/walnut.png");
+  background-image: url("tekstury/thumbs/walnut.jpg");
 }
 
 .dark-walnut {
-  background-image: linear-gradient(rgba(0,0,0,.28), rgba(0,0,0,.28)), url("tekstury/runtime/walnut.png");
+  background-image: linear-gradient(rgba(0,0,0,.28), rgba(0,0,0,.28)), url("tekstury/thumbs/walnut.jpg");
 }
 
 .solid {
