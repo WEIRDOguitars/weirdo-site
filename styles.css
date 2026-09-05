@@ -940,7 +940,7 @@ textarea {
     z-index: 8;
     height: clamp(360px, 62dvh, 560px);
     min-height: 360px;
-    margin: 0 10px 10px;
+    margin: 0 10px 8px;
     background:
       radial-gradient(ellipse at 50% 50%, rgba(224, 190, 132, .18) 0, rgba(142, 92, 58, .10) 28%, rgba(255,255,255,.035) 48%, transparent 72%),
       linear-gradient(180deg, #23211e, #141310 72%);
@@ -949,11 +949,16 @@ textarea {
   .viewer-controls {
     grid-template-columns: 1fr 1fr;
     gap: 7px;
-    padding: 0 12px 14px;
+    padding: 0 12px 12px;
+    background: #141310;
+  }
+
+  .viewer-controls .ghost-button {
+    display: none;
   }
 
   .range-field {
-    grid-column: span 1;
+    grid-column: auto;
   }
 
   .preview-caption {
