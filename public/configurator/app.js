@@ -626,8 +626,20 @@ function setRadioValue(name, value) {
 }
 
 function applyHardwarePreset(value) {
+  const pickupByHardware = {
+    "Czarny": "Czarne bez puszek",
+    "Nikiel": "W niklowych puszkach",
+    "Chrom": "W chromowanych puszkach",
+    "Złoty": "W złotych puszkach"
+  };
+  const pickupPreset = pickupByHardware[value];
   setRadioValue("knobColor", value);
-  setRadioValue("pickupFrameColor", value);
+  if (pickupPreset) {
+    setRadioValue("pickups", pickupPreset);
+    applyPickupPreset(pickupPreset);
+  } else {
+    setRadioValue("pickupFrameColor", value);
+  }
 }
 
 function pickupPresetValues(value) {
