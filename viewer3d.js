@@ -558,11 +558,10 @@ function pickupAreaCenter() {
 function onePickupKeepKnobMesh() {
   const knobs = meshes.filter(mesh => mesh.userData.role === "knobs");
   if (!knobs.length) return null;
-  const pickupCenter = pickupAreaCenter();
   return knobs.reduce((best, mesh) => {
     const center = meshWorldCenter(mesh);
-    const distance = center.distanceTo(pickupCenter);
-    return !best || distance < best.distance ? { mesh, distance } : best;
+    const score = center.y * 1000 - center.x;
+    return !best || score < best.score ? { mesh, score } : best;
   }, null)?.mesh || knobs[0];
 }
 

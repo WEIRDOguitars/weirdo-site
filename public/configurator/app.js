@@ -24,7 +24,7 @@ const defaults = {
   electronicsLayout: "Układ 1: 4 gałki + 2 switche",
   headMode: "Czarna",
   headFinish: "Gloss",
-  pickups: "Czarne bez puszek",
+  pickups: "Otwarta ramka",
   pickupFrameColor: "Chrom",
   pickupCenterColor: "Czarny",
   pickupMagnetColor: "Szare",
@@ -799,6 +799,22 @@ function resetForm() {
   updateSummary();
 }
 
+function zoomPreviewByWheel(event) {
+  if (!stageWrap?.contains(event.target)) return;
+
+  event.preventDefault();
+  const direction = event.deltaY > 0 ? -1 : 1;
+  const current = Number(zoomSlider.value || 0);
+  const min = Number(zoomSlider.min || 0);
+  const max = Number(zoomSlider.max || 100);
+  const step = event.ctrlKey ? 2 : 6;
+  const next = Math.max(min, Math.min(max, current + direction * step));
+
+  if (next === current) return;
+  zoomSlider.value = String(next);
+  zoomSlider.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 function setRadioValue(name, value) {
   const input = form.querySelector(`input[name="${name}"][value="${value}"]`);
   if (!input) return;
@@ -878,6 +894,7 @@ form.addEventListener("change", event => {
 
 frameSlider.addEventListener("input", drawCanvas);
 zoomSlider.addEventListener("input", drawCanvas);
+stageWrap?.addEventListener("wheel", zoomPreviewByWheel, { passive: false });
 document.querySelector("#resetButton").addEventListener("click", resetForm);
 
 window.addEventListener("weirdo:viewer3d-ready", () => {

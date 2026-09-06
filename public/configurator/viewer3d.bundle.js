@@ -34499,18 +34499,13 @@ void main() {
   function electronicsMeshName(mesh) {
     return materialName(mesh);
   }
-  function pickupAreaCenter() {
-    const pickupBox = meshRoleBounds("pickupFrame") || meshRoleBounds("pickupCenter") || meshRoleBounds("pickupMagnets");
-    return pickupBox ? pickupBox.getCenter(new Vector3()) : new Vector3(0, 0, 0);
-  }
   function onePickupKeepKnobMesh() {
     const knobs = meshes.filter((mesh) => mesh.userData.role === "knobs");
     if (!knobs.length) return null;
-    const pickupCenter = pickupAreaCenter();
     return knobs.reduce((best, mesh) => {
       const center = meshWorldCenter(mesh);
-      const distance = center.distanceTo(pickupCenter);
-      return !best || distance < best.distance ? { mesh, distance } : best;
+      const score = center.y * 1e3 - center.x;
+      return !best || score < best.score ? { mesh, score } : best;
     }, null)?.mesh || knobs[0];
   }
   function isUpperPickupMesh(mesh) {
