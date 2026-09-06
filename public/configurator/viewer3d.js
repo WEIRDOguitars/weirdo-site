@@ -393,12 +393,10 @@ function forceOpaqueCanvas(context, width, height) {
 
 function selectedTopTexture(wood, color, area = "top", finish = "Mat") {
   const label = normalizedLabel(wood);
-  const side = area === "sides";
-  const head = area === "head";
 
   if (label.includes("jednolity")) return null;
   if (label.includes("klon")) return tintedTextureMap("mapleFlame", color, area, finish, 1, 1);
-  if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area, finish, 1, 1);
+  if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area, finish, 1.45, 1.45);
   if (label.includes("mahon")) return tintedTextureMap("topMahogany", color, area, finish, 1, 1);
   if (label.includes("orzech")) return tintedTextureMap("topWalnut", color, area, finish, 1, 1);
   return tintedTextureMap("topWalnut", color, area, finish, 1, 1);

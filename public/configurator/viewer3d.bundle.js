@@ -34365,11 +34365,9 @@ void main() {
   }
   function selectedTopTexture(wood, color, area2 = "top", finish = "Mat") {
     const label = normalizedLabel(wood);
-    const side = area2 === "sides";
-    const head = area2 === "head";
     if (label.includes("jednolity")) return null;
     if (label.includes("klon")) return tintedTextureMap("mapleFlame", color, area2, finish, 1, 1);
-    if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area2, finish, 1, 1);
+    if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area2, finish, 1.45, 1.45);
     if (label.includes("mahon")) return tintedTextureMap("topMahogany", color, area2, finish, 1, 1);
     if (label.includes("orzech")) return tintedTextureMap("topWalnut", color, area2, finish, 1, 1);
     return tintedTextureMap("topWalnut", color, area2, finish, 1, 1);

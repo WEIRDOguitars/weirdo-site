@@ -293,20 +293,21 @@ function textureForWood(wood, color) {
 function drawCoverTexture(targetCtx, texture, wood) {
   if (!texture) return;
   const rotate = wood !== "Topola czeczot";
+  const cropScale = wood === "Topola czeczot" ? 1.45 : 1;
   targetCtx.save();
   targetCtx.filter = wood === "Klon falisty" ? "contrast(1.45) brightness(.68)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
 
   if (rotate) {
     const rotatedW = canvas.height;
     const rotatedH = canvas.width;
-    const scale = Math.max(rotatedW / texture.width, rotatedH / texture.height);
+    const scale = Math.max(rotatedW / texture.width, rotatedH / texture.height) * cropScale;
     const drawW = texture.width * scale;
     const drawH = texture.height * scale;
     targetCtx.translate(canvas.width, 0);
     targetCtx.rotate(Math.PI / 2);
     targetCtx.drawImage(texture, (rotatedW - drawW) / 2, (rotatedH - drawH) / 2, drawW, drawH);
   } else {
-    const scale = Math.max(canvas.width / texture.width, canvas.height / texture.height);
+    const scale = Math.max(canvas.width / texture.width, canvas.height / texture.height) * cropScale;
     const drawW = texture.width * scale;
     const drawH = texture.height * scale;
     targetCtx.drawImage(texture, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
