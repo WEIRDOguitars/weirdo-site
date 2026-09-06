@@ -154,6 +154,10 @@ function normalizedLabel(value) {
     .toLowerCase();
 }
 
+function acceptsWoodTint(area) {
+  return area === "top" || area === "sides" || area === "head";
+}
+
 function activeElectronicsVariant() {
   const layout = normalizedLabel(fieldValue("electronicsLayout"));
   if (layout.includes("1 pickup")) return "onePickup";
@@ -276,11 +280,12 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   forceOpaqueCanvas(context, width, height);
 
   if (color !== "natural") {
-    const burstApplied = vivid && (area === "top" || area === "sides") && paintBurstTint(context, width, height, color);
+    const tintableWoodArea = acceptsWoodTint(area);
+    const burstApplied = vivid && tintableWoodArea && paintBurstTint(context, width, height, color);
     if (burstApplied) {
       // Burst handles its own depth and color blend.
     } else {
-      if (vivid && (area === "top" || area === "sides")) {
+      if (vivid && tintableWoodArea) {
         context.globalCompositeOperation = "multiply";
         context.globalAlpha = isMaple ? .12 : .22;
         context.fillStyle = "#050505";

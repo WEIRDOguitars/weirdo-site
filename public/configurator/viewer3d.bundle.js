@@ -34178,6 +34178,9 @@ void main() {
   function normalizedLabel(value) {
     return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   }
+  function acceptsWoodTint(area2) {
+    return area2 === "top" || area2 === "sides" || area2 === "head";
+  }
   function activeElectronicsVariant() {
     const layout = normalizedLabel(fieldValue("electronicsLayout"));
     if (layout.includes("1 pickup")) return "onePickup";
@@ -34262,10 +34265,11 @@ void main() {
     context.filter = "none";
     forceOpaqueCanvas(context, width, height);
     if (color !== "natural") {
-      const burstApplied = vivid && (area2 === "top" || area2 === "sides") && paintBurstTint(context, width, height, color);
+      const tintableWoodArea = acceptsWoodTint(area2);
+      const burstApplied = vivid && tintableWoodArea && paintBurstTint(context, width, height, color);
       if (burstApplied) {
       } else {
-        if (vivid && (area2 === "top" || area2 === "sides")) {
+        if (vivid && tintableWoodArea) {
           context.globalCompositeOperation = "multiply";
           context.globalAlpha = isMaple ? 0.12 : 0.22;
           context.fillStyle = "#050505";
