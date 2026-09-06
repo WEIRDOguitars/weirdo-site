@@ -425,7 +425,7 @@ function selectedTopTexture(wood, color, area = "top", finish = "Mat") {
 
   if (label.includes("jednolity")) return null;
   if (label.includes("klon")) return tintedTextureMap("mapleFlame", color, area, finish, 1, 1);
-  if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area, finish, .86, .86);
+  if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area, finish, 1, 1);
   if (label.includes("mahon")) return tintedTextureMap("topMahogany", color, area, finish, 1, 1);
   if (label.includes("orzech")) return tintedTextureMap("topWalnut", color, area, finish, 1, 1);
   return tintedTextureMap("topWalnut", color, area, finish, 1, 1);
@@ -581,10 +581,12 @@ function applyWoodUvs() {
     head: roleBounds("head"),
     body: roleBounds("body")
   };
+  const topTextureReference = bounds.sides || bounds.body || bounds.top;
 
   meshes.forEach(mesh => {
     if (!["top", "sides", "head", "body"].includes(mesh.userData.role)) return;
-    applyPlanarWoodUv(mesh, bounds[mesh.userData.role]);
+    const referenceBox = mesh.userData.role === "top" ? topTextureReference : bounds[mesh.userData.role];
+    applyPlanarWoodUv(mesh, referenceBox);
   });
 }
 

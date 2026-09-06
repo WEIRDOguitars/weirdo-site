@@ -34391,7 +34391,7 @@ void main() {
     const label = normalizedLabel(wood);
     if (label.includes("jednolity")) return null;
     if (label.includes("klon")) return tintedTextureMap("mapleFlame", color, area2, finish, 1, 1);
-    if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area2, finish, 0.86, 0.86);
+    if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area2, finish, 1, 1);
     if (label.includes("mahon")) return tintedTextureMap("topMahogany", color, area2, finish, 1, 1);
     if (label.includes("orzech")) return tintedTextureMap("topWalnut", color, area2, finish, 1, 1);
     return tintedTextureMap("topWalnut", color, area2, finish, 1, 1);
@@ -34530,9 +34530,11 @@ void main() {
       head: roleBounds("head"),
       body: roleBounds("body")
     };
+    const topTextureReference = bounds.sides || bounds.body || bounds.top;
     meshes.forEach((mesh) => {
       if (!["top", "sides", "head", "body"].includes(mesh.userData.role)) return;
-      applyPlanarWoodUv(mesh, bounds[mesh.userData.role]);
+      const referenceBox = mesh.userData.role === "top" ? topTextureReference : bounds[mesh.userData.role];
+      applyPlanarWoodUv(mesh, referenceBox);
     });
   }
   function materialName(mesh) {
