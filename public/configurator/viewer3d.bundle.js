@@ -34251,10 +34251,10 @@ void main() {
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
-    const textureOffsetY = area2 === "top" ? -height * 0.1 : 0;
     const isMaple = key === "mapleFlame";
     const isPoplar = key === "poplarBurl";
     const vivid = isMaple || isPoplar;
+    const textureOffsetY = area2 === "top" && vivid ? -height * 0.1 : 0;
     const baseColors = {
       mapleFlame: "#c79242",
       poplarBurl: "#b88745",
@@ -35092,14 +35092,13 @@ void main() {
       }
       if (mesh.userData.role === "metalLogo") {
         mesh.renderOrder = 8;
-        mesh.material.polygonOffset = true;
-        mesh.material.polygonOffsetFactor = -8;
-        mesh.material.polygonOffsetUnits = -8;
+        mesh.material.polygonOffset = false;
         mesh.material.depthTest = true;
         mesh.material.depthWrite = false;
       }
       mesh.material.needsUpdate = true;
     });
+    updateMetalLogoVisibility(pivot.rotation.y);
     updateViewerDebug("materials");
     render();
   }
@@ -35316,7 +35315,7 @@ void main() {
   }
   function updateMetalLogoVisibility(yawRadians) {
     const frontAmount = Math.cos(yawRadians - baseYaw);
-    const visible = frontAmount > 0.08;
+    const visible = frontAmount > 0.55;
     meshes.forEach((mesh) => {
       if (mesh.userData.role === "metalLogo") mesh.visible = visible;
     });
