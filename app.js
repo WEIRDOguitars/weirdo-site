@@ -610,6 +610,7 @@ function resetForm() {
   form.reset();
   document.querySelector("#topColor").value = defaults.topColor;
   document.querySelector("#sideColor").value = defaults.sideColor;
+  applyPickupPreset(defaults.pickups);
   frameSlider.value = "0";
   zoomSlider.value = "0";
   renderPalettes();
@@ -629,7 +630,32 @@ function applyHardwarePreset(value) {
   setRadioValue("pickupFrameColor", value);
 }
 
+function pickupPresetValues(value) {
+  return {
+    "Czarne bez puszek": { frame: "Czarny", center: "Czarny", locked: true },
+    "W niklowych puszkach": { frame: "Nikiel", center: "Nikiel", locked: true },
+    "W chromowanych puszkach": { frame: "Chrom", center: "Chrom", locked: true },
+    "W złotych puszkach": { frame: "Złoty", center: "Złoty", locked: true },
+    "Otwarta ramka": { locked: false }
+  }[value] || { locked: false };
+}
+
+function setPickupCustomLocked(locked) {
+  document.querySelectorAll(".pickup-custom-fieldset").forEach(fieldset => {
+    fieldset.classList.toggle("is-locked", locked);
+    fieldset.setAttribute("aria-disabled", locked ? "true" : "false");
+  });
+}
+
+function applyPickupPreset(value = fieldValue("pickups")) {
+  const preset = pickupPresetValues(value);
+  if (preset.frame) setRadioValue("pickupFrameColor", preset.frame);
+  if (preset.center) setRadioValue("pickupCenterColor", preset.center);
+  setPickupCustomLocked(preset.locked);
+}
+
 renderPalettes();
+applyPickupPreset();
 
 document.addEventListener("click", event => {
   const colorButton = event.target.closest(".finish-color");
@@ -654,6 +680,10 @@ form.addEventListener("input", () => {
 form.addEventListener("change", event => {
   if (event.target?.name === "hardwareColor") {
     applyHardwarePreset(event.target.value);
+    window.weirdoViewer3d?.rerender?.();
+  }
+  if (event.target?.name === "pickups") {
+    applyPickupPreset(event.target.value);
     window.weirdoViewer3d?.rerender?.();
   }
   if (!viewer3dReady || stageWrap?.classList.contains("viewer-3d-fallback")) drawCanvas();

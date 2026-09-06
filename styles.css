@@ -453,19 +453,25 @@ legend {
   top: 40px;
 }
 
-.choice:has(input[name="pickups"][value="W czarnych puszkach"]) > span:not(.wood-swatch) {
-  background: radial-gradient(circle at 50% 50%, #363636, #090909 68%);
+.choice:has(input[name="pickups"][value="Czarne bez puszek"]) > span:not(.wood-swatch) {
+  background:
+    linear-gradient(90deg, #070707 0 46%, #242424 48% 52%, #070707 54% 100%),
+    radial-gradient(circle at 50% 50%, #363636, #090909 68%);
 }
 
-.choice:has(input[name="pickups"][value="W niklowych / chromowanych puszkach"]) > span:not(.wood-swatch) {
-  background: linear-gradient(90deg, #71756f, #f5f8f2 32%, #b4bbb3 55%, #3c403d);
+.choice:has(input[name="pickups"][value="W niklowych puszkach"]) > span:not(.wood-swatch) {
+  background: linear-gradient(90deg, #635f58, #f1eadc 32%, #aaa59b 55%, #4c4944);
+}
+
+.choice:has(input[name="pickups"][value="W chromowanych puszkach"]) > span:not(.wood-swatch) {
+  background: linear-gradient(90deg, #596062, #ffffff 32%, #aeb7b7 55%, #363c3f);
 }
 
 .choice:has(input[name="pickups"][value="W złotych puszkach"]) > span:not(.wood-swatch) {
   background: linear-gradient(90deg, #6f5013, #f0d15b 34%, #b78320 58%, #4b3109);
 }
 
-.choice:has(input[name="pickups"][value="Otwarta chromowana puszka"]) > span:not(.wood-swatch) {
+.choice:has(input[name="pickups"][value="Otwarta ramka"]) > span:not(.wood-swatch) {
   background:
     linear-gradient(90deg, #d7dedb 0 16%, transparent 17% 83%, #f6faf7 84% 100%),
     linear-gradient(90deg, #111 0 46%, #292929 48% 52%, #111 54% 100%);
@@ -741,6 +747,20 @@ textarea {
   top: 5px;
   right: 7px;
   font-size: 7px;
+}
+
+.pickup-custom-fieldset {
+  transition: opacity .18s ease, filter .18s ease;
+}
+
+.pickup-custom-fieldset.is-locked {
+  opacity: .42;
+  filter: grayscale(.35);
+}
+
+.pickup-custom-fieldset.is-locked .choice {
+  pointer-events: none;
+  cursor: default;
 }
 
 .summary-list {
