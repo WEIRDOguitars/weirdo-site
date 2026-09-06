@@ -648,7 +648,7 @@ function pickupPresetValues(value) {
     "W niklowych puszkach": { frame: "Nikiel", center: "Nikiel", locked: true },
     "W chromowanych puszkach": { frame: "Chrom", center: "Chrom", locked: true },
     "W złotych puszkach": { frame: "Złoty", center: "Złoty", locked: true },
-    "Otwarta ramka": { locked: false }
+    "Otwarta ramka": { frame: "Chrom", center: "Czarny", locked: false }
   }[value] || { locked: false };
 }
 
