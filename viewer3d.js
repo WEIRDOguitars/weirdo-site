@@ -287,7 +287,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
 
   if (color !== "natural") {
     const tintableWoodArea = acceptsWoodTint(area);
-    const burstApplied = vivid && tintableWoodArea && paintBurstTint(context, width, height, color);
+    const burstApplied = vivid && tintableWoodArea && paintBurstTint(context, width, height, color, isMaple);
     if (burstApplied) {
       // Burst handles its own depth and color blend.
     } else {
@@ -345,14 +345,14 @@ function burstCenter(width, height) {
   return { x: width * .54, y: height * .5 };
 }
 
-function paintBurstTint(context, width, height, color) {
+function paintBurstTint(context, width, height, color, mapleBurst = false) {
   const burst = burstDefinition(color);
   if (!burst) return false;
   const center = burstCenter(width, height);
 
   context.save();
   context.globalCompositeOperation = "multiply";
-  context.globalAlpha = .42;
+  context.globalAlpha = mapleBurst ? .5 : .42;
   context.fillStyle = "#050505";
   context.fillRect(0, 0, width, height);
 
@@ -365,12 +365,19 @@ function paintBurstTint(context, width, height, color) {
   context.fillStyle = radial;
   context.fillRect(0, 0, width, height);
 
+  if (mapleBurst) {
+    context.globalCompositeOperation = "source-over";
+    context.globalAlpha = .12;
+    context.fillStyle = radial;
+    context.fillRect(0, 0, width, height);
+  }
+
   const edgeShade = context.createRadialGradient(center.x, center.y, width * .28, center.x, center.y, width * .68);
   edgeShade.addColorStop(0, "rgba(255,255,255,0)");
-  edgeShade.addColorStop(.58, "rgba(0,0,0,.16)");
-  edgeShade.addColorStop(1, "rgba(0,0,0,.82)");
+  edgeShade.addColorStop(.58, `rgba(0,0,0,${mapleBurst ? .2 : .16})`);
+  edgeShade.addColorStop(1, `rgba(0,0,0,${mapleBurst ? .9 : .82})`);
   context.globalCompositeOperation = "multiply";
-  context.globalAlpha = .82;
+  context.globalAlpha = mapleBurst ? .9 : .82;
   context.fillStyle = edgeShade;
   context.fillRect(0, 0, width, height);
 
@@ -379,7 +386,7 @@ function paintBurstTint(context, width, height, color) {
   centerLift.addColorStop(.62, "rgba(255,255,255,.04)");
   centerLift.addColorStop(1, "rgba(255,255,255,0)");
   context.globalCompositeOperation = "screen";
-  context.globalAlpha = .3;
+  context.globalAlpha = mapleBurst ? .22 : .3;
   context.fillStyle = centerLift;
   context.fillRect(0, 0, width, height);
 
@@ -419,6 +426,39 @@ function paintGlossIntoTexture(context, width, height, area) {
   depth.addColorStop(1, "rgba(255,255,255,.1)");
   context.fillStyle = depth;
   context.fillRect(0, 0, width, height);
+
+  context.restore();
+  context.globalCompositeOperation = "source-over";
+  context.globalAlpha = 1;
+}
+
+function paintSolidGlossIntoTexture(context, width, height, area, color) {
+  const side = area === "sides";
+  context.save();
+  context.globalCompositeOperation = "screen";
+
+  const reflection = context.createLinearGradient(width * -.06, height * .86, width * .74, height * .08);
+  reflection.addColorStop(0, "rgba(255,255,255,0)");
+  reflection.addColorStop(.38, "rgba(255,255,255,0)");
+  reflection.addColorStop(.49, `rgba(255,255,255,${color === "#101010" ? .62 : .48})`);
+  reflection.addColorStop(.56, `rgba(255,255,255,${color === "#101010" ? .28 : .2})`);
+  reflection.addColorStop(.68, "rgba(255,255,255,0)");
+  context.fillStyle = reflection;
+  context.fillRect(0, 0, width, height);
+
+  const broad = context.createRadialGradient(width * .38, height * .28, 0, width * .38, height * .28, width * (side ? .34 : .44));
+  broad.addColorStop(0, `rgba(255,248,226,${side ? .24 : .34})`);
+  broad.addColorStop(.5, `rgba(255,248,226,${side ? .08 : .12})`);
+  broad.addColorStop(1, "rgba(255,255,255,0)");
+  context.fillStyle = broad;
+  context.fillRect(0, 0, width, height);
+
+  context.globalCompositeOperation = "overlay";
+  context.globalAlpha = color === "paint:candy-apple-red" ? .52 : .36;
+  context.fillStyle = color === "paint:candy-apple-red" ? "#ff3c2f" : "#ffffff";
+  for (let x = -width; x < width * 2; x += Math.max(18, width * .025)) {
+    context.fillRect(x, 0, Math.max(2, width * .003), height);
+  }
 
   context.restore();
   context.globalCompositeOperation = "source-over";
@@ -860,13 +900,53 @@ function resolveSolidPaintColor(color) {
   return color;
 }
 
-function paintTextureForColor(color) {
+function paintTextureKeyForColor(color) {
   return {
-    "paint:cream-white": textureMap("paintCreamWhite", 1, 1),
-    "paint:pearl-white": textureMap("paintPearlWhite", 1, 1),
-    "paint:metallic-black": textureMap("paintMetallicBlack", 1, 1),
-    "paint:candy-apple-red": textureMap("paintCandyAppleRed", 1, 1)
+    "paint:cream-white": "paintCreamWhite",
+    "paint:pearl-white": "paintPearlWhite",
+    "paint:metallic-black": "paintMetallicBlack",
+    "paint:candy-apple-red": "paintCandyAppleRed"
   }[color] || null;
+}
+
+function paintTextureForColor(color, finish = "Mat", area = "top") {
+  const sourceKey = paintTextureKeyForColor(color);
+  if (finish !== "Gloss") return sourceKey ? textureMap(sourceKey, 1, 1) : null;
+
+  const cacheKey = `solid-paint|${color}|${finish}|${area}`;
+  if (tintedTextureCache.has(cacheKey)) return tintedTextureCache.get(cacheKey).clone();
+
+  const source = sourceKey ? textures[sourceKey] : null;
+  const image = source?.image;
+  const canvas = document.createElement("canvas");
+  const width = image?.naturalWidth || image?.width || 1024;
+  const height = image?.naturalHeight || image?.height || 1024;
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+
+  if (image) {
+    context.drawImage(image, 0, 0, width, height);
+  } else {
+    context.fillStyle = resolveSolidPaintColor(color);
+    context.fillRect(0, 0, width, height);
+  }
+
+  paintSolidGlossIntoTexture(context, width, height, area, color);
+  forceOpaqueCanvas(context, width, height);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.format = THREE.RGBAFormat;
+  texture.premultiplyAlpha = false;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.repeat.set(1, 1);
+  texture.offset.set(0, 0);
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  texture.needsUpdate = true;
+  tintedTextureCache.set(cacheKey, texture);
+  return texture.clone();
 }
 
 function woodMaterial(wood, color, finish, area = "top") {
@@ -874,9 +954,10 @@ function woodMaterial(wood, color, finish, area = "top") {
   if (wood === "Jednolity kolor") {
     const candy = color === "paint:candy-apple-red";
     const metallic = String(color).startsWith("paint:");
+    const paintMap = paintTextureForColor(color, finish, area);
     const materialOptions = {
-      color: resolveSolidPaintColor(color),
-      map: paintTextureForColor(color),
+      color: paintMap ? "#ffffff" : resolveSolidPaintColor(color),
+      map: paintMap,
       roughness: finish === "Gloss" ? candy ? .2 : .24 : .58,
       clearcoat: finish === "Gloss" ? candy ? .9 : .74 : .12,
       clearcoatRoughness: finish === "Gloss" ? .09 : .42,

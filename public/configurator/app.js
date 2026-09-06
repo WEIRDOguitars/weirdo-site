@@ -6,6 +6,8 @@ const stageWrap = document.querySelector(".stage-wrap");
 const frameSlider = document.querySelector("#frameSlider");
 const zoomSlider = document.querySelector("#zoomSlider");
 let viewer3dReady = false;
+let wheelZoomTarget = null;
+let wheelZoomFrame = 0;
 
 const defaults = {
   topWood: "Klon falisty",
@@ -297,6 +299,22 @@ function applySolidPaintFinish(context, width, height, color) {
   context.fillStyle = shine;
   context.fillRect(0, 0, width, height);
 
+  const reflection = context.createLinearGradient(width * -.1, height * .82, width * .7, height * .12);
+  reflection.addColorStop(0, "rgba(255,255,255,0)");
+  reflection.addColorStop(.42, "rgba(255,255,255,0)");
+  reflection.addColorStop(.5, color === "#101010" ? "rgba(255,255,255,.5)" : "rgba(255,255,255,.38)");
+  reflection.addColorStop(.56, color === "#101010" ? "rgba(255,255,255,.22)" : "rgba(255,255,255,.15)");
+  reflection.addColorStop(.66, "rgba(255,255,255,0)");
+  context.fillStyle = reflection;
+  context.fillRect(0, 0, width, height);
+
+  const softReflection = context.createRadialGradient(width * .38, height * .28, 0, width * .38, height * .28, width * .44);
+  softReflection.addColorStop(0, "rgba(255,255,255,.22)");
+  softReflection.addColorStop(.5, "rgba(255,255,255,.06)");
+  softReflection.addColorStop(1, "rgba(255,255,255,0)");
+  context.fillStyle = softReflection;
+  context.fillRect(0, 0, width, height);
+
   context.globalCompositeOperation = "overlay";
   context.globalAlpha = color === "paint:candy-apple-red" ? .46 : .3;
   context.fillStyle = color === "paint:candy-apple-red" ? "#ff3c2f" : "#ffffff";
@@ -358,14 +376,15 @@ function burstCenter(width, height) {
   return { x: width * .54, y: height * .5 };
 }
 
-function applyBurstColor(context, width, height, color) {
+function applyBurstColor(context, width, height, color, wood = "") {
   const burst = burstDefinition(color);
   if (!burst) return false;
   const center = burstCenter(width, height);
+  const mapleBurst = wood === "Klon falisty";
 
   context.save();
   context.globalCompositeOperation = "multiply";
-  context.globalAlpha = .42;
+  context.globalAlpha = mapleBurst ? .5 : .42;
   context.fillStyle = "#050505";
   context.fillRect(0, 0, width, height);
 
@@ -378,12 +397,19 @@ function applyBurstColor(context, width, height, color) {
   context.fillStyle = radial;
   context.fillRect(0, 0, width, height);
 
+  if (mapleBurst) {
+    context.globalCompositeOperation = "source-over";
+    context.globalAlpha = .12;
+    context.fillStyle = radial;
+    context.fillRect(0, 0, width, height);
+  }
+
   const edgeShade = context.createRadialGradient(center.x, center.y, width * .28, center.x, center.y, width * .68);
   edgeShade.addColorStop(0, "rgba(255,255,255,0)");
-  edgeShade.addColorStop(.58, "rgba(0,0,0,.16)");
-  edgeShade.addColorStop(1, "rgba(0,0,0,.82)");
+  edgeShade.addColorStop(.58, `rgba(0,0,0,${mapleBurst ? .2 : .16})`);
+  edgeShade.addColorStop(1, `rgba(0,0,0,${mapleBurst ? .9 : .82})`);
   context.globalCompositeOperation = "multiply";
-  context.globalAlpha = .82;
+  context.globalAlpha = mapleBurst ? .9 : .82;
   context.fillStyle = edgeShade;
   context.fillRect(0, 0, width, height);
 
@@ -392,7 +418,7 @@ function applyBurstColor(context, width, height, color) {
   centerLift.addColorStop(.62, "rgba(255,255,255,.04)");
   centerLift.addColorStop(1, "rgba(255,255,255,0)");
   context.globalCompositeOperation = "screen";
-  context.globalAlpha = .3;
+  context.globalAlpha = mapleBurst ? .22 : .3;
   context.fillStyle = centerLift;
   context.fillRect(0, 0, width, height);
 
@@ -414,7 +440,7 @@ function woodLayer(mask, color, wood, finish) {
 
   if (color !== "natural") {
     const vivid = wood === "Klon falisty" || wood === "Topola czeczot";
-    const burstApplied = vivid && applyBurstColor(layerCtx, layer.width, layer.height, color);
+    const burstApplied = vivid && applyBurstColor(layerCtx, layer.width, layer.height, color, wood);
     if (burstApplied) {
       // Burst handles its own depth and color blend.
     } else {
@@ -804,15 +830,34 @@ function zoomPreviewByWheel(event) {
 
   event.preventDefault();
   const direction = event.deltaY > 0 ? -1 : 1;
-  const current = Number(zoomSlider.value || 0);
+  const current = wheelZoomTarget ?? Number(zoomSlider.value || 0);
   const min = Number(zoomSlider.min || 0);
   const max = Number(zoomSlider.max || 100);
-  const step = event.ctrlKey ? 2 : 6;
+  const delta = Math.min(8, Math.max(1.8, Math.abs(event.deltaY) / 22));
+  const step = event.ctrlKey ? delta * .45 : delta;
   const next = Math.max(min, Math.min(max, current + direction * step));
 
   if (next === current) return;
-  zoomSlider.value = String(next);
+  wheelZoomTarget = next;
+  if (!wheelZoomFrame) wheelZoomFrame = window.requestAnimationFrame(animateWheelZoom);
+}
+
+function animateWheelZoom() {
+  const current = Number(zoomSlider.value || 0);
+  const target = wheelZoomTarget ?? current;
+  const next = current + (target - current) * .28;
+
+  if (Math.abs(target - next) < .08) {
+    zoomSlider.value = String(Math.round(target * 10) / 10);
+    zoomSlider.dispatchEvent(new Event("input", { bubbles: true }));
+    wheelZoomTarget = null;
+    wheelZoomFrame = 0;
+    return;
+  }
+
+  zoomSlider.value = String(Math.round(next * 10) / 10);
   zoomSlider.dispatchEvent(new Event("input", { bubbles: true }));
+  wheelZoomFrame = window.requestAnimationFrame(animateWheelZoom);
 }
 
 function setRadioValue(name, value) {
