@@ -34487,6 +34487,37 @@ void main() {
     });
     model.updateWorldMatrix(true, true);
   }
+  function addRoleGlossCoat(role, name, gap = 0.075) {
+    const sourceMeshes = meshes.filter((mesh) => {
+      if (mesh.userData.role !== role || mesh.userData.glossCoat) return false;
+      if (role === "top") return mesh.userData.surfaceSkin;
+      return !mesh.userData.surfaceSkin;
+    });
+    sourceMeshes.forEach((source) => {
+      const coat = new Mesh(source.geometry.clone(), source.material);
+      coat.name = name || `${source.name || role}GlossCoat`;
+      coat.userData = {
+        ...source.userData,
+        forceRole: role,
+        role,
+        glossCoat: true,
+        glossSourceVariant: source.userData.geometryVariant || "default",
+        geometryVariant: source.userData.geometryVariant || "default",
+        sourceMaterial: source.userData.sourceMaterial || ""
+      };
+      coat.castShadow = false;
+      coat.receiveShadow = false;
+      coat.renderOrder = Math.max(source.renderOrder || 0, role === "top" ? 3.8 : 2.8);
+      coat.position.copy(source.position);
+      coat.rotation.copy(source.rotation);
+      coat.quaternion.copy(source.quaternion);
+      coat.scale.copy(source.scale);
+      source.parent.add(coat);
+      moveObjectInWorld(coat, new Vector3(0, 0, gap));
+      meshes.push(coat);
+    });
+    model.updateWorldMatrix(true, true);
+  }
   function applyWoodUvs() {
     model.updateWorldMatrix(true, true);
     const bounds = {
@@ -34565,6 +34596,64 @@ void main() {
       depthWrite: true,
       side: FrontSide,
       toneMapped: true
+    });
+  }
+  function glossCoatMaterial(role) {
+    const finish = role === "sides" ? fieldValue("sideFinish") : fieldValue("topFinish");
+    const enabled = finish === "Gloss";
+    return new ShaderMaterial({
+      uniforms: {
+        coatOpacity: { value: enabled ? role === "top" ? 0.48 : 0.34 : 0 },
+        bandStrength: { value: role === "top" ? 1 : 0.72 },
+        sweepOffset: { value: role === "top" ? -4 : 1.5 }
+      },
+      vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewDir;
+      varying vec3 vWorldPosition;
+
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vNormal = normalize(normalMatrix * normal);
+        vViewDir = normalize(-mvPosition.xyz);
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+      fragmentShader: `
+      uniform float coatOpacity;
+      uniform float bandStrength;
+      uniform float sweepOffset;
+      varying vec3 vNormal;
+      varying vec3 vViewDir;
+      varying vec3 vWorldPosition;
+
+      void main() {
+        if (coatOpacity <= 0.001) discard;
+
+        vec3 normal = normalize(vNormal);
+        vec3 viewDir = normalize(vViewDir);
+        float facing = clamp(dot(normal, viewDir), 0.0, 1.0);
+        float fresnel = pow(1.0 - facing, 2.25);
+
+        float broadBand = 1.0 - smoothstep(0.0, 24.0, abs(vWorldPosition.x - vWorldPosition.y * 0.17 + sweepOffset));
+        float narrowBand = 1.0 - smoothstep(0.0, 7.0, abs(vWorldPosition.x - vWorldPosition.y * 0.1 - 9.0));
+        float verticalSheen = smoothstep(-52.0, 15.0, vWorldPosition.y) * (1.0 - smoothstep(42.0, 88.0, vWorldPosition.y));
+
+        float alpha = coatOpacity * (broadBand * bandStrength + narrowBand * 0.3 + fresnel * 0.42) * verticalSheen;
+        if (alpha < 0.018) discard;
+
+        vec3 color = mix(vec3(1.0, 0.93, 0.78), vec3(1.0), 0.55);
+        gl_FragColor = vec4(color, alpha);
+      }
+    `,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+      blending: AdditiveBlending,
+      side: FrontSide,
+      toneMapped: false
     });
   }
   function resolveSolidPaintColor(color) {
@@ -34784,7 +34873,9 @@ void main() {
         return;
       }
       if (mesh.userData.glossCoat) {
-        mesh.visible = false;
+        mesh.visible = (mesh.userData.geometryVariant || "default") === activeVariant;
+        mesh.material = glossCoatMaterial(mesh.userData.role);
+        mesh.material.needsUpdate = true;
         return;
       }
       if ((mesh.userData.role === "top" || mesh.userData.role === "sides") && (mesh.userData.geometryVariant || "default") !== activeVariant) {
@@ -35140,6 +35231,8 @@ void main() {
     });
     liftRoleAbove("top", ["sides", "body"], 0.12);
     addRoleSurfaceSkin("top", "TopCleanSurfaceSkin", 0.085);
+    addRoleGlossCoat("top", "TopGlossCoat", 0.075);
+    addRoleGlossCoat("sides", "SidesGlossCoat", 0.06);
     applyWoodUvs();
     alignMetalLogoGeometryLayer(metalLogoModel);
     if (metalLogoModel) {

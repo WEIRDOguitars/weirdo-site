@@ -537,7 +537,7 @@ function addRoleSurfaceSkin(role, name, gap = .035) {
 
 function addRoleGlossCoat(role, name, gap = .075) {
   const sourceMeshes = meshes.filter(mesh => {
-    if (!mesh.visible || mesh.userData.role !== role || mesh.userData.glossCoat) return false;
+    if (mesh.userData.role !== role || mesh.userData.glossCoat) return false;
     if (role === "top") return mesh.userData.surfaceSkin;
     return !mesh.userData.surfaceSkin;
   });
@@ -550,6 +550,8 @@ function addRoleGlossCoat(role, name, gap = .075) {
       forceRole: role,
       role,
       glossCoat: true,
+      glossSourceVariant: source.userData.geometryVariant || "default",
+      geometryVariant: source.userData.geometryVariant || "default",
       sourceMaterial: source.userData.sourceMaterial || ""
     };
     coat.castShadow = false;
@@ -949,7 +951,9 @@ function applyMaterials() {
       return;
     }
     if (mesh.userData.glossCoat) {
-      mesh.visible = false;
+      mesh.visible = (mesh.userData.geometryVariant || "default") === activeVariant;
+      mesh.material = glossCoatMaterial(mesh.userData.role);
+      mesh.material.needsUpdate = true;
       return;
     }
     if ((mesh.userData.role === "top" || mesh.userData.role === "sides") && (mesh.userData.geometryVariant || "default") !== activeVariant) {
@@ -1434,6 +1438,8 @@ async function init() {
   });
   liftRoleAbove("top", ["sides", "body"], .12);
   addRoleSurfaceSkin("top", "TopCleanSurfaceSkin", .085);
+  addRoleGlossCoat("top", "TopGlossCoat", .075);
+  addRoleGlossCoat("sides", "SidesGlossCoat", .06);
   applyWoodUvs();
   alignMetalLogoGeometryLayer(metalLogoModel);
   if (metalLogoModel) {
