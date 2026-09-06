@@ -6,6 +6,7 @@ const stageWrap = document.querySelector(".stage-wrap");
 const frameSlider = document.querySelector("#frameSlider");
 const zoomSlider = document.querySelector("#zoomSlider");
 const backgroundSelect = document.querySelector("#backgroundSelect");
+const modelImportInput = document.querySelector("#modelImportInput");
 let viewer3dReady = false;
 let wheelZoomTarget = null;
 let wheelZoomFrame = 0;
@@ -811,6 +812,16 @@ function getSummaryItems() {
   }));
 }
 
+function getFormSelections() {
+  const selections = {};
+  const data = new FormData(form);
+  for (const [key, value] of data.entries()) {
+    if (key === "website") continue;
+    selections[key] = String(value);
+  }
+  return selections;
+}
+
 function captureConfigurationImage() {
   const captured = window.weirdoViewer3d?.captureImage?.({
     frame: 0,
@@ -895,6 +906,53 @@ function setRadioValue(name, value) {
   input.checked = true;
 }
 
+function setFormValue(name, value) {
+  const controls = Array.from(form.querySelectorAll(`[name="${CSS.escape(name)}"]`));
+  if (!controls.length) return false;
+  const stringValue = String(value ?? "");
+  const radio = controls.find(control => control.type === "radio");
+
+  if (radio) {
+    const match = controls.find(control => control.value === stringValue);
+    if (!match) return false;
+    match.checked = true;
+    return true;
+  }
+
+  controls[0].value = stringValue;
+  return true;
+}
+
+function applyImportedSelections(selections) {
+  if (!selections || typeof selections !== "object") {
+    throw new Error("Plik JSON nie zawiera konfiguracji do wczytania.");
+  }
+
+  const deferred = new Set(["topColor", "sideColor", "pickupFrameColor", "pickupCenterColor"]);
+  for (const [name, value] of Object.entries(selections)) {
+    if (!deferred.has(name)) setFormValue(name, value);
+  }
+
+  renderPalettes();
+  for (const name of deferred) {
+    if (Object.hasOwn(selections, name)) setFormValue(name, selections[name]);
+  }
+
+  const pickupPreset = pickupPresetValues(fieldValue("pickups"));
+  setPickupCustomLocked(pickupPreset.locked);
+  window.weirdoViewer3d?.rerender?.();
+  drawCanvas(true);
+  updateSummary();
+}
+
+async function importModelFromFile(file) {
+  const text = await file.text();
+  const data = JSON.parse(text);
+  const selections = data.selections || data.configuration || data.form;
+  applyImportedSelections(selections);
+  showToast("Model został wczytany. Możesz dalej edytować konfigurację.");
+}
+
 function applyHardwarePreset(value) {
   setRadioValue("knobColor", value);
   setRadioValue("pickups", "Otwarta ramka");
@@ -969,6 +1027,18 @@ form.addEventListener("change", event => {
 frameSlider.addEventListener("input", drawCanvas);
 zoomSlider.addEventListener("input", drawCanvas);
 backgroundSelect?.addEventListener("change", applyPreviewBackground);
+modelImportInput?.addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    await importModelFromFile(file);
+  } catch (error) {
+    showToast(error.message || "Nie udało się wczytać pliku modelu.");
+  } finally {
+    event.target.value = "";
+  }
+});
 stageWrap?.addEventListener("wheel", zoomPreviewByWheel, { passive: false });
 document.querySelector("#resetButton").addEventListener("click", resetForm);
 
@@ -1011,6 +1081,7 @@ form.addEventListener("submit", async event => {
       customerName: form.elements.customerName.value,
       customerEmail: form.elements.customerEmail.value,
       website: form.elements.website.value,
+      selections: getFormSelections(),
       summary: getSummaryItems(),
       image
     };

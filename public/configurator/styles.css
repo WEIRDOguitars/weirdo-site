@@ -880,6 +880,51 @@ textarea {
   cursor: wait;
 }
 
+.load-model-panel {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.load-model-panel input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.file-button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 18px;
+  border: 1px solid rgba(216, 168, 36, .5);
+  border-radius: 10px;
+  color: var(--text);
+  background: rgba(255,255,255,.035);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-align: center;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+
+.file-button:hover {
+  border-color: var(--accent);
+  background: rgba(216, 168, 36, .11);
+  transform: translateY(-1px);
+}
+
+.load-model-panel small {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
 .submit-note {
   color: var(--muted);
   font-size: 11px;

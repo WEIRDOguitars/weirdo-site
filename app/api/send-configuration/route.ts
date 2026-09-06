@@ -14,6 +14,7 @@ type SubmissionRecord = {
     name: string;
     email: string;
   };
+  selections: Record<string, string>;
   summary: SummaryItem[];
   image: {
     filename: string;
@@ -184,6 +185,7 @@ export async function POST(request: Request) {
     const website = String(body.website || "").trim();
     const image = String(body.image || "");
     const summary = Array.isArray(body.summary) ? body.summary : [];
+    const rawSelections = body.selections && typeof body.selections === "object" ? body.selections : {};
 
     if (website) return NextResponse.json({ ok: true });
 
@@ -208,6 +210,15 @@ export async function POST(request: Request) {
         value: String(item?.value || "").trim().slice(0, 1000)
       }))
       .filter((item: SummaryItem) => item.label && item.value);
+    const cleanSelections = Object.fromEntries(
+      Object.entries(rawSelections)
+        .slice(0, 80)
+        .map(([key, value]) => [
+          String(key).trim().slice(0, 120),
+          String(value ?? "").trim().slice(0, 1000)
+        ])
+        .filter(([key]) => key)
+    );
 
     const rows = cleanSummary
       .map(
@@ -231,6 +242,7 @@ export async function POST(request: Request) {
         name: customerName,
         email: customerEmail
       },
+      selections: cleanSelections,
       summary: cleanSummary,
       image: {
         filename: imageFilename
