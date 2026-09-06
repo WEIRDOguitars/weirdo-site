@@ -34072,7 +34072,11 @@ void main() {
     topMahogany: `${assetBase}/tekstury/runtime/mahogany-top.png`,
     topWalnut: `${assetBase}/tekstury/runtime/walnut.png`,
     bodyMahogany: `${assetBase}/tekstury/runtime/body-mahogany.png`,
-    bodyAsh: `${assetBase}/tekstury/runtime/body-ash.png`
+    bodyAsh: `${assetBase}/tekstury/runtime/body-ash.png`,
+    paintCreamWhite: `${assetBase}/tekstury/runtime/paint-cream-white.png`,
+    paintPearlWhite: `${assetBase}/tekstury/runtime/paint-pearl-white.png`,
+    paintMetallicBlack: `${assetBase}/tekstury/runtime/paint-metallic-black.png`,
+    paintCandyAppleRed: `${assetBase}/tekstury/runtime/paint-candy-apple-red.png`
   };
   var metalFinishes = {
     Chrom: { color: "#dce4e6", metalness: 0.62, roughness: 0.18, clearcoat: 0.65, clearcoatRoughness: 0.1, emissive: "#1f2527", emissiveIntensity: 0.18 },
@@ -34550,19 +34554,32 @@ void main() {
   }
   function resolveSolidPaintColor(color) {
     if (color === "natural") return "#d7b37a";
-    if (color === "solid:candy-red") return "#b51616";
+    if (color === "paint:candy-apple-red") return "#b51616";
+    if (color === "paint:cream-white") return "#d8c39a";
+    if (color === "paint:pearl-white") return "#f2eee6";
+    if (color === "paint:metallic-black") return "#101010";
     return color;
+  }
+  function paintTextureForColor(color) {
+    return {
+      "paint:cream-white": textureMap("paintCreamWhite", 1, 1),
+      "paint:pearl-white": textureMap("paintPearlWhite", 1, 1),
+      "paint:metallic-black": textureMap("paintMetallicBlack", 1, 1),
+      "paint:candy-apple-red": textureMap("paintCandyAppleRed", 1, 1)
+    }[color] || null;
   }
   function woodMaterial(wood, color, finish, area2 = "top") {
     const useFlatSurface = area2 === "top" || area2 === "sides" || area2 === "head";
     if (wood === "Jednolity kolor") {
-      const candy = color === "solid:candy-red";
+      const candy = color === "paint:candy-apple-red";
+      const metallic = String(color).startsWith("paint:");
       const materialOptions2 = {
         color: resolveSolidPaintColor(color),
+        map: paintTextureForColor(color),
         roughness: finish === "Gloss" ? candy ? 0.2 : 0.24 : 0.58,
         clearcoat: finish === "Gloss" ? candy ? 0.9 : 0.74 : 0.12,
         clearcoatRoughness: finish === "Gloss" ? 0.09 : 0.42,
-        metalness: candy ? 0.08 : 0.03,
+        metalness: metallic ? 0.08 : 0.03,
         side: FrontSide
       };
       return useFlatSurface ? flatWoodMaterial(materialOptions2) : physicalMaterial(materialOptions2);

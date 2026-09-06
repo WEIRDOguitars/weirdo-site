@@ -26,7 +26,11 @@ const texturePaths = {
   topMahogany: `${assetBase}/tekstury/runtime/mahogany-top.png`,
   topWalnut: `${assetBase}/tekstury/runtime/walnut.png`,
   bodyMahogany: `${assetBase}/tekstury/runtime/body-mahogany.png`,
-  bodyAsh: `${assetBase}/tekstury/runtime/body-ash.png`
+  bodyAsh: `${assetBase}/tekstury/runtime/body-ash.png`,
+  paintCreamWhite: `${assetBase}/tekstury/runtime/paint-cream-white.png`,
+  paintPearlWhite: `${assetBase}/tekstury/runtime/paint-pearl-white.png`,
+  paintMetallicBlack: `${assetBase}/tekstury/runtime/paint-metallic-black.png`,
+  paintCandyAppleRed: `${assetBase}/tekstury/runtime/paint-candy-apple-red.png`
 };
 
 const metalFinishes = {
@@ -695,20 +699,34 @@ function glossCoatMaterial(role) {
 
 function resolveSolidPaintColor(color) {
   if (color === "natural") return "#d7b37a";
-  if (color === "solid:candy-red") return "#b51616";
+  if (color === "paint:candy-apple-red") return "#b51616";
+  if (color === "paint:cream-white") return "#d8c39a";
+  if (color === "paint:pearl-white") return "#f2eee6";
+  if (color === "paint:metallic-black") return "#101010";
   return color;
+}
+
+function paintTextureForColor(color) {
+  return {
+    "paint:cream-white": textureMap("paintCreamWhite", 1, 1),
+    "paint:pearl-white": textureMap("paintPearlWhite", 1, 1),
+    "paint:metallic-black": textureMap("paintMetallicBlack", 1, 1),
+    "paint:candy-apple-red": textureMap("paintCandyAppleRed", 1, 1)
+  }[color] || null;
 }
 
 function woodMaterial(wood, color, finish, area = "top") {
   const useFlatSurface = area === "top" || area === "sides" || area === "head";
   if (wood === "Jednolity kolor") {
-    const candy = color === "solid:candy-red";
+    const candy = color === "paint:candy-apple-red";
+    const metallic = String(color).startsWith("paint:");
     const materialOptions = {
       color: resolveSolidPaintColor(color),
+      map: paintTextureForColor(color),
       roughness: finish === "Gloss" ? candy ? .2 : .24 : .58,
       clearcoat: finish === "Gloss" ? candy ? .9 : .74 : .12,
       clearcoatRoughness: finish === "Gloss" ? .09 : .42,
-      metalness: candy ? .08 : .03,
+      metalness: metallic ? .08 : .03,
       side: THREE.FrontSide
     };
     return useFlatSurface ? flatWoodMaterial(materialOptions) : physicalMaterial(materialOptions);

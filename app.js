@@ -52,6 +52,9 @@ const finishColors = [
 
 const burstColors = [
   ["Bez barwnika", "natural", "natural"],
+  ["Żółty", "#d6a824"],
+  ["Zielony", "#24563b"],
+  ["Niebieski", "#1c5fa8"],
   ["Evil green", "burst:evil-green", "linear-gradient(135deg, #06150b 0%, #14502d 35%, #79b957 100%)"],
   ["Devil red", "burst:devil-red", "linear-gradient(135deg, #170203 0%, #9b1512 42%, #e07821 100%)"],
   ["Purple rain", "burst:purple-rain", "linear-gradient(135deg, #12051d 0%, #61307f 48%, #1b66b0 100%)"],
@@ -59,13 +62,14 @@ const burstColors = [
   ["Foggy", "burst:foggy", "linear-gradient(135deg, #060606 0%, #565b5f 52%, #c1b9a7 100%)"]
 ];
 
-const darkWoodColors = finishColors.filter(([name]) => !["Szary", "Biały"].includes(name));
+const darkWoodColors = finishColors.filter(([name]) => !["Szary", "Biały", "Kremowy"].includes(name));
 
 const solidPaintColors = [
-  ["Czarny metallic", "#101010", "radial-gradient(circle at 35% 25%, #4a4a46 0%, #101010 42%, #020202 100%)"],
-  ["Biały metallic", "#f2eee6", "radial-gradient(circle at 35% 25%, #ffffff 0%, #eee8db 48%, #bcb8b0 100%)"],
-  ["Kremowy metallic", "#d8c39a", "radial-gradient(circle at 35% 25%, #fff2cb 0%, #d8c39a 50%, #9c8358 100%)"],
-  ["Candy red metallic", "solid:candy-red", "radial-gradient(circle at 35% 25%, #ff6a54 0%, #b51616 48%, #350304 100%)"]
+  ["Cream White", "paint:cream-white", "radial-gradient(circle at 35% 25%, #fff2d2 0%, #dac394 50%, #987d52 100%)"],
+  ["Pearl White", "paint:pearl-white", "radial-gradient(circle at 35% 25%, #ffffff 0%, #e8e4d6 48%, #aeb6b8 100%)"],
+  ["Black", "#101010", "radial-gradient(circle at 35% 25%, #252525 0%, #101010 46%, #020202 100%)"],
+  ["Metallic Black", "paint:metallic-black", "radial-gradient(circle at 35% 25%, #64645f 0%, #131313 45%, #020202 100%)"],
+  ["Candy apple red", "paint:candy-apple-red", "radial-gradient(circle at 35% 25%, #ff5b42 0%, #b51616 48%, #350304 100%)"]
 ];
 
 const bindingOptions = [
@@ -106,7 +110,11 @@ const paths = {
   poplarBurl: `${assetBase}/tekstury/runtime/poplar-burl.png`,
   mahogany: `${assetBase}/tekstury/runtime/mahogany-top.png`,
   europeanWalnut: `${assetBase}/tekstury/runtime/walnut.png`,
-  americanWalnut: `${assetBase}/tekstury/runtime/walnut.png`
+  americanWalnut: `${assetBase}/tekstury/runtime/walnut.png`,
+  paintCreamWhite: `${assetBase}/tekstury/runtime/paint-cream-white.png`,
+  paintPearlWhite: `${assetBase}/tekstury/runtime/paint-pearl-white.png`,
+  paintMetallicBlack: `${assetBase}/tekstury/runtime/paint-metallic-black.png`,
+  paintCandyAppleRed: `${assetBase}/tekstury/runtime/paint-candy-apple-red.png`
 };
 
 const images = {};
@@ -244,9 +252,14 @@ function solidLayer(mask, color) {
   if (!mask) return blankLayer();
   const layer = createCanvas();
   const layerCtx = layer.getContext("2d");
-  layerCtx.fillStyle = resolveSolidPaintColor(color);
-  layerCtx.fillRect(0, 0, layer.width, layer.height);
-  applySolidPaintFinish(layerCtx, layer.width, layer.height, color);
+  const paint = paintTextureForColor(color);
+  if (paint) {
+    drawCoverTexture(layerCtx, paint, "Jednolity kolor", color);
+  } else {
+    layerCtx.fillStyle = resolveSolidPaintColor(color);
+    layerCtx.fillRect(0, 0, layer.width, layer.height);
+    applySolidPaintFinish(layerCtx, layer.width, layer.height, color);
+  }
   layerCtx.globalCompositeOperation = "destination-in";
   layerCtx.drawImage(mask, 0, 0);
   layerCtx.globalCompositeOperation = "source-over";
@@ -255,8 +268,20 @@ function solidLayer(mask, color) {
 
 function resolveSolidPaintColor(color) {
   if (color === "natural") return "#d6b27a";
-  if (color === "solid:candy-red") return "#b51616";
+  if (color === "paint:candy-apple-red") return "#b51616";
+  if (color === "paint:cream-white") return "#d8c39a";
+  if (color === "paint:pearl-white") return "#f2eee6";
+  if (color === "paint:metallic-black") return "#101010";
   return color;
+}
+
+function paintTextureForColor(color) {
+  return {
+    "paint:cream-white": images.paintCreamWhite,
+    "paint:pearl-white": images.paintPearlWhite,
+    "paint:metallic-black": images.paintMetallicBlack,
+    "paint:candy-apple-red": images.paintCandyAppleRed
+  }[color] || null;
 }
 
 function applySolidPaintFinish(context, width, height, color) {
@@ -272,8 +297,8 @@ function applySolidPaintFinish(context, width, height, color) {
   context.fillRect(0, 0, width, height);
 
   context.globalCompositeOperation = "overlay";
-  context.globalAlpha = color === "solid:candy-red" ? .34 : .2;
-  context.fillStyle = color === "solid:candy-red" ? "#ff3c2f" : "#ffffff";
+  context.globalAlpha = color === "paint:candy-apple-red" ? .34 : .2;
+  context.fillStyle = color === "paint:candy-apple-red" ? "#ff3c2f" : "#ffffff";
   for (let x = -width; x < width * 2; x += 22) {
     context.fillRect(x, 0, 2, height);
   }
