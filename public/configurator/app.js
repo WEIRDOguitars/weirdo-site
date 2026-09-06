@@ -290,12 +290,14 @@ function textureForWood(wood, color) {
   return images.europeanWalnut;
 }
 
-function drawCoverTexture(targetCtx, texture, wood) {
+function drawCoverTexture(targetCtx, texture, wood, color = "") {
   if (!texture) return;
   const rotate = wood !== "Topola czeczot";
-  const cropScale = wood === "Topola czeczot" ? 1.45 : 1;
+  const cropScale = wood === "Topola czeczot" ? 1.16 : 1;
   targetCtx.save();
-  targetCtx.filter = wood === "Klon falisty" ? "contrast(1.45) brightness(.68)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
+  targetCtx.filter = color === "natural"
+    ? wood === "Klon falisty" ? "contrast(1.16) brightness(.98) saturate(1.06)" : wood === "Topola czeczot" ? "contrast(1.12) brightness(.98) saturate(1.04)" : "contrast(1.08) brightness(.92) saturate(1.04)"
+    : wood === "Klon falisty" ? "contrast(1.45) brightness(.68)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
 
   if (rotate) {
     const rotatedW = canvas.height;
@@ -377,7 +379,7 @@ function woodLayer(mask, color, wood, finish) {
   const layerCtx = layer.getContext("2d");
   const texture = textureForWood(wood, color);
   if (!texture) return solidLayer(mask, color);
-  drawCoverTexture(layerCtx, texture, wood);
+  drawCoverTexture(layerCtx, texture, wood, color);
 
   if (color !== "natural") {
     const vivid = wood === "Klon falisty" || wood === "Topola czeczot";

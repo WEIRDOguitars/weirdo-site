@@ -242,9 +242,11 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
     bodyAsh: "#d1b170"
   };
 
-  context.fillStyle = baseColors[key] || "#8a6040";
+  context.fillStyle = color === "natural" ? "#d2aa6a" : baseColors[key] || "#8a6040";
   context.fillRect(0, 0, width, height);
-  context.filter = vivid ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
+  context.filter = color === "natural"
+    ? vivid ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)"
+    : vivid ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
   context.drawImage(image, 0, 0, width, height);
   context.filter = "none";
 
@@ -286,6 +288,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.repeat.set(repeatX, repeatY);
+  texture.offset.set((1 - repeatX) / 2, (1 - repeatY) / 2);
   texture.center.set(.5, .5);
   texture.rotation = rotation;
   texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -396,7 +399,7 @@ function selectedTopTexture(wood, color, area = "top", finish = "Mat") {
 
   if (label.includes("jednolity")) return null;
   if (label.includes("klon")) return tintedTextureMap("mapleFlame", color, area, finish, 1, 1);
-  if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area, finish, 1.45, 1.45);
+  if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area, finish, .86, .86);
   if (label.includes("mahon")) return tintedTextureMap("topMahogany", color, area, finish, 1, 1);
   if (label.includes("orzech")) return tintedTextureMap("topWalnut", color, area, finish, 1, 1);
   return tintedTextureMap("topWalnut", color, area, finish, 1, 1);
