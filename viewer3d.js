@@ -229,13 +229,14 @@ function selectedTexture(wood, color) {
   return textures.europeanWalnut;
 }
 
-function textureMap(key, repeatX = 1, repeatY = 1, rotation = 0) {
+function textureMap(key, repeatX = 1, repeatY = 1, rotation = 0, offsetX = 0, offsetY = 0) {
   const source = textures[key];
   if (!source) return null;
   const texture = source.clone();
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
   texture.repeat.set(repeatX, repeatY);
+  texture.offset.set(offsetX, offsetY);
   texture.center.set(.5, .5);
   texture.rotation = rotation;
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -259,6 +260,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext("2d");
+  const textureOffsetY = area === "top" ? -height * .1 : 0;
   const isMaple = key === "mapleFlame";
   const isPoplar = key === "poplarBurl";
   const vivid = isMaple || isPoplar;
@@ -280,7 +282,8 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   context.filter = color === "natural"
     ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)"
     : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
-  context.drawImage(image, 0, 0, width, height);
+  context.drawImage(image, 0, textureOffsetY, width, height);
+  if (textureOffsetY < 0) context.drawImage(image, 0, height + textureOffsetY, width, height);
   context.filter = "none";
 
   forceOpaqueCanvas(context, width, height);
@@ -477,7 +480,7 @@ function selectedTopTexture(wood, color, area = "top", finish = "Mat") {
   const label = normalizedLabel(wood);
 
   if (label.includes("jednolity")) return null;
-  if (label.includes("klon")) return color === "natural" ? textureMap("mapleFlame", 1, 1) : tintedTextureMap("mapleFlame", color, area, finish, 1, 1);
+  if (label.includes("klon")) return color === "natural" ? textureMap("mapleFlame", 1, 1, 0, 0, area === "top" ? .1 : 0) : tintedTextureMap("mapleFlame", color, area, finish, 1, 1);
   if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area, finish, 1, 1);
   if (label.includes("mahon")) return tintedTextureMap("topMahogany", color, area, finish, 1, 1);
   if (label.includes("orzech")) return tintedTextureMap("topWalnut", color, area, finish, 1, 1);
@@ -595,14 +598,32 @@ function pickupAreaCenter() {
   return pickupBox ? pickupBox.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 0, 0);
 }
 
-function onePickupKeepKnobMesh() {
+function knobPositionGroup(mesh) {
+  const center = meshWorldCenter(mesh);
+  return {
+    key: `${center.x.toFixed(1)}|${center.y.toFixed(1)}`,
+    center
+  };
+}
+
+function onePickupKeepKnobGroup() {
   const knobs = meshes.filter(mesh => mesh.userData.role === "knobs");
-  if (!knobs.length) return null;
-  return knobs.reduce((best, mesh) => {
-    const center = meshWorldCenter(mesh);
-    const score = center.y * 1000 - center.x;
-    return !best || score < best.score ? { mesh, score } : best;
-  }, null)?.mesh || knobs[0];
+  if (!knobs.length) return new Set();
+
+  const groups = new Map();
+  knobs.forEach(mesh => {
+    const { key, center } = knobPositionGroup(mesh);
+    const group = groups.get(key) || { meshes: [], center };
+    group.meshes.push(mesh);
+    groups.set(key, group);
+  });
+
+  const keep = Array.from(groups.values()).reduce((best, group) => {
+    const score = group.center.y * 1000 - group.center.x;
+    return !best || score < best.score ? { group, score } : best;
+  }, null)?.group;
+
+  return new Set(keep?.meshes || [knobs[0]]);
 }
 
 function isUpperPickupMesh(mesh) {
@@ -621,7 +642,7 @@ function isHiddenForElectronicsVariant(mesh, activeVariant) {
   if (activeVariant !== "onePickup") return false;
   if (isUpperPickupMesh(mesh)) return true;
   if (isSwitchMesh(mesh)) return true;
-  if (mesh.userData.role === "knobs") return mesh !== onePickupKeepKnobMesh();
+  if (mesh.userData.role === "knobs") return !onePickupKeepKnobGroup().has(mesh);
   return false;
 }
 

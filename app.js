@@ -54,14 +54,14 @@ const finishColors = [
 
 const burstColors = [
   ["Bez barwnika", "natural", "natural"],
-  ["Żółty", "#d6a824"],
-  ["Zielony", "#24563b"],
-  ["Niebieski", "#1c5fa8"],
   ["Evil green", "burst:evil-green", "linear-gradient(135deg, #06150b 0%, #14502d 35%, #79b957 100%)"],
   ["Devil red", "burst:devil-red", "linear-gradient(135deg, #170203 0%, #9b1512 42%, #e07821 100%)"],
   ["Purple rain", "burst:purple-rain", "linear-gradient(135deg, #12051d 0%, #61307f 48%, #1b66b0 100%)"],
   ["Sunshine", "burst:sunshine", "linear-gradient(135deg, #6f2d08 0%, #db7e21 48%, #f0c83a 100%)"],
-  ["Foggy", "burst:foggy", "linear-gradient(135deg, #060606 0%, #565b5f 52%, #c1b9a7 100%)"]
+  ["Foggy", "burst:foggy", "linear-gradient(135deg, #060606 0%, #565b5f 52%, #c1b9a7 100%)"],
+  ["Żółty", "#d6a824"],
+  ["Zielony", "#24563b"],
+  ["Niebieski", "#1c5fa8"]
 ];
 
 const darkWoodColors = finishColors.filter(([name]) => !["Szary", "Biały", "Kremowy"].includes(name));
@@ -334,10 +334,11 @@ function textureForWood(wood, color) {
   return images.europeanWalnut;
 }
 
-function drawCoverTexture(targetCtx, texture, wood, color = "") {
+function drawCoverTexture(targetCtx, texture, wood, color = "", area = "") {
   if (!texture) return;
   const rotate = wood !== "Topola czeczot";
   const cropScale = wood === "Topola czeczot" ? 1.16 : 1;
+  const topTextureOffset = area === "top" ? -.1 : 0;
   targetCtx.save();
   targetCtx.filter = color === "natural"
     ? wood === "Klon falisty" ? "none" : wood === "Topola czeczot" ? "contrast(1.12) brightness(.98) saturate(1.04)" : "contrast(1.08) brightness(.92) saturate(1.04)"
@@ -351,12 +352,12 @@ function drawCoverTexture(targetCtx, texture, wood, color = "") {
     const drawH = texture.height * scale;
     targetCtx.translate(canvas.width, 0);
     targetCtx.rotate(Math.PI / 2);
-    targetCtx.drawImage(texture, (rotatedW - drawW) / 2, (rotatedH - drawH) / 2, drawW, drawH);
+    targetCtx.drawImage(texture, (rotatedW - drawW) / 2, (rotatedH - drawH) / 2 + drawH * topTextureOffset, drawW, drawH);
   } else {
     const scale = Math.max(canvas.width / texture.width, canvas.height / texture.height) * cropScale;
     const drawW = texture.width * scale;
     const drawH = texture.height * scale;
-    targetCtx.drawImage(texture, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
+    targetCtx.drawImage(texture, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2 + drawH * topTextureOffset, drawW, drawH);
   }
 
   targetCtx.restore();
@@ -428,7 +429,7 @@ function applyBurstColor(context, width, height, color, wood = "") {
   return true;
 }
 
-function woodLayer(mask, color, wood, finish) {
+function woodLayer(mask, color, wood, finish, area = "") {
   if (!mask) return blankLayer();
   if (wood === "Jednolity kolor") return solidLayer(mask, color);
 
@@ -436,7 +437,7 @@ function woodLayer(mask, color, wood, finish) {
   const layerCtx = layer.getContext("2d");
   const texture = textureForWood(wood, color);
   if (!texture) return solidLayer(mask, color);
-  drawCoverTexture(layerCtx, texture, wood, color);
+  drawCoverTexture(layerCtx, texture, wood, color, area);
 
   if (color !== "natural") {
     const vivid = wood === "Klon falisty" || wood === "Topola czeczot";
@@ -592,8 +593,8 @@ function headLayer(topColor, sideColor, topWood, sideWood) {
   const mode = fieldValue("headMode");
   const finish = fieldValue("headFinish");
 
-  if (mode === "Jak top") return woodLayer(masks.head, topColor, topWood, finish);
-  if (mode === "Jak boki") return woodLayer(masks.head, sideColor, sideWood, finish);
+  if (mode === "Jak top") return woodLayer(masks.head, topColor, topWood, finish, "head");
+  if (mode === "Jak boki") return woodLayer(masks.head, sideColor, sideWood, finish, "head");
   return tintOriginalLayer(images.head, masks.head, "#050505", .92);
 }
 
@@ -728,12 +729,12 @@ function drawConfiguredFront() {
   const model = createCanvas();
   const modelCtx = model.getContext("2d");
   modelCtx.drawImage(bodyBaseLayer(), 0, 0);
-  modelCtx.drawImage(woodLayer(masks.sides, sideColor, sideWood, fieldValue("sideFinish")), 0, 0);
+  modelCtx.drawImage(woodLayer(masks.sides, sideColor, sideWood, fieldValue("sideFinish"), "sides"), 0, 0);
   modelCtx.save();
   modelCtx.shadowColor = "rgba(0,0,0,.45)";
   modelCtx.shadowBlur = 10;
   modelCtx.shadowOffsetX = 3;
-  modelCtx.drawImage(woodLayer(masks.top, topColor, topWood, fieldValue("topFinish")), 0, 0);
+  modelCtx.drawImage(woodLayer(masks.top, topColor, topWood, fieldValue("topFinish"), "top"), 0, 0);
   modelCtx.restore();
   modelCtx.drawImage(headLayer(topColor, sideColor, topWood, sideWood), 0, 0);
   modelCtx.drawImage(fretboardLayer(), 0, 0);
