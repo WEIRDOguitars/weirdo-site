@@ -24,7 +24,8 @@ const electronicsGeometryVariants = {
   },
   onePickup: {
     top: `${assetBase}/elementy/model 3d/Modyfikacje/1 pickup/top 1 pickup.3mf`,
-    sides: `${assetBase}/elementy/model 3d/Modyfikacje/1 pickup/Boki 1 pickup.3mf`
+    sides: `${assetBase}/elementy/model 3d/Modyfikacje/1 pickup/Boki 1 pickup.3mf`,
+    knobs: `${assetBase}/elementy/model 3d/Modyfikacje/1 pickup/galka 1 pickup.3mf`
   }
 };
 
@@ -440,28 +441,23 @@ function paintSolidGlossIntoTexture(context, width, height, area, color) {
   context.save();
   context.globalCompositeOperation = "screen";
 
-  const reflection = context.createLinearGradient(width * -.06, height * .86, width * .74, height * .08);
+  const reflection = context.createLinearGradient(width * .18, 0, width * .72, height);
   reflection.addColorStop(0, "rgba(255,255,255,0)");
-  reflection.addColorStop(.38, "rgba(255,255,255,0)");
-  reflection.addColorStop(.49, `rgba(255,255,255,${color === "#101010" ? .62 : .48})`);
-  reflection.addColorStop(.56, `rgba(255,255,255,${color === "#101010" ? .28 : .2})`);
-  reflection.addColorStop(.68, "rgba(255,255,255,0)");
+  reflection.addColorStop(.5, "rgba(255,255,255,0)");
+  reflection.addColorStop(.57, `rgba(255,255,255,${color === "#101010" ? .56 : .42})`);
+  reflection.addColorStop(.63, `rgba(255,255,255,${color === "#101010" ? .22 : .15})`);
+  reflection.addColorStop(.74, "rgba(255,255,255,0)");
   context.fillStyle = reflection;
   context.fillRect(0, 0, width, height);
 
-  const broad = context.createRadialGradient(width * .38, height * .28, 0, width * .38, height * .28, width * (side ? .34 : .44));
-  broad.addColorStop(0, `rgba(255,248,226,${side ? .24 : .34})`);
-  broad.addColorStop(.5, `rgba(255,248,226,${side ? .08 : .12})`);
-  broad.addColorStop(1, "rgba(255,255,255,0)");
+  const broad = context.createLinearGradient(0, height * .16, width, height * .78);
+  broad.addColorStop(0, "rgba(255,255,255,0)");
+  broad.addColorStop(.36, "rgba(255,244,218,0)");
+  broad.addColorStop(.48, `rgba(255,248,226,${side ? .22 : .34})`);
+  broad.addColorStop(.58, `rgba(255,248,226,${side ? .12 : .18})`);
+  broad.addColorStop(.76, "rgba(255,255,255,0)");
   context.fillStyle = broad;
   context.fillRect(0, 0, width, height);
-
-  context.globalCompositeOperation = "overlay";
-  context.globalAlpha = color === "paint:candy-apple-red" ? .52 : .36;
-  context.fillStyle = color === "paint:candy-apple-red" ? "#ff3c2f" : "#ffffff";
-  for (let x = -width; x < width * 2; x += Math.max(18, width * .025)) {
-    context.fillRect(x, 0, Math.max(2, width * .003), height);
-  }
 
   context.restore();
   context.globalCompositeOperation = "source-over";
@@ -593,39 +589,6 @@ function electronicsMeshName(mesh) {
   return materialName(mesh);
 }
 
-function pickupAreaCenter() {
-  const pickupBox = meshRoleBounds("pickupFrame") || meshRoleBounds("pickupCenter") || meshRoleBounds("pickupMagnets");
-  return pickupBox ? pickupBox.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 0, 0);
-}
-
-function knobPositionGroup(mesh) {
-  const center = meshWorldCenter(mesh);
-  return {
-    key: `${center.x.toFixed(1)}|${center.y.toFixed(1)}`,
-    center
-  };
-}
-
-function onePickupKeepKnobGroup() {
-  const knobs = meshes.filter(mesh => mesh.userData.role === "knobs");
-  if (!knobs.length) return new Set();
-
-  const groups = new Map();
-  knobs.forEach(mesh => {
-    const { key, center } = knobPositionGroup(mesh);
-    const group = groups.get(key) || { meshes: [], center };
-    group.meshes.push(mesh);
-    groups.set(key, group);
-  });
-
-  const keep = Array.from(groups.values()).reduce((best, group) => {
-    const score = group.center.y * 1000 - group.center.x;
-    return !best || score < best.score ? { group, score } : best;
-  }, null)?.group;
-
-  return new Set(keep?.meshes || [knobs[0]]);
-}
-
 function isUpperPickupMesh(mesh) {
   if (!["pickupFrame", "pickupCenter", "pickupMagnets", "pickup"].includes(mesh.userData.role)) return false;
   const pickupBox = meshRoleBounds("pickupFrame") || meshRoleBounds("pickupCenter") || meshRoleBounds("pickupMagnets");
@@ -642,7 +605,6 @@ function isHiddenForElectronicsVariant(mesh, activeVariant) {
   if (activeVariant !== "onePickup") return false;
   if (isUpperPickupMesh(mesh)) return true;
   if (isSwitchMesh(mesh)) return true;
-  if (mesh.userData.role === "knobs") return !onePickupKeepKnobGroup().has(mesh);
   return false;
 }
 
@@ -1195,7 +1157,7 @@ function applyMaterials() {
       mesh.material.needsUpdate = true;
       return;
     }
-    if ((mesh.userData.role === "top" || mesh.userData.role === "sides") && (mesh.userData.geometryVariant || "default") !== activeVariant) {
+    if (["top", "sides", "knobs"].includes(mesh.userData.role) && (mesh.userData.geometryVariant || "default") !== activeVariant) {
       mesh.visible = false;
       return;
     }
@@ -1629,10 +1591,9 @@ async function init() {
   container.dataset.viewerStatus = "loading-models";
   const loader = new FBXLoader();
   const layerLoader = new ThreeMFLoader();
-  const variantLayerPromises = Object.entries(electronicsGeometryVariants).flatMap(([variant, paths]) => [
-    layerLoader.loadAsync(encodeURI(paths.top)).then(layer => ({ variant, role: "top", layer })),
-    layerLoader.loadAsync(encodeURI(paths.sides)).then(layer => ({ variant, role: "sides", layer }))
-  ]);
+  const variantLayerPromises = Object.entries(electronicsGeometryVariants).flatMap(([variant, paths]) =>
+    Object.entries(paths).map(([role, path]) => layerLoader.loadAsync(encodeURI(path)).then(layer => ({ variant, role, layer })))
+  );
   const [mainModel, variantLayers, bodyBindingModel, metalLogoModel] = await Promise.all([
     loader.loadAsync(encodeURI(modelPath)),
     Promise.all(variantLayerPromises),
@@ -1644,8 +1605,8 @@ async function init() {
     prepareForcedLayerModel(
       layer,
       role,
-      `${variant === "default" ? "" : `${variant}-`}${role === "top" ? "TopLayer3MF" : "SidesLayer3MF"}`,
-      role === "top" ? 2 : 1,
+      `${variant === "default" ? "" : `${variant}-`}${role === "top" ? "TopLayer3MF" : role === "sides" ? "SidesLayer3MF" : "KnobsLayer3MF"}`,
+      role === "top" ? 2 : role === "knobs" ? 5 : 1,
       isDefaultTop ? child => isNamedLayerMesh(child, "Top") : null
     );
     tagGeometryVariant(layer, variant);

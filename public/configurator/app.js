@@ -299,28 +299,23 @@ function applySolidPaintFinish(context, width, height, color) {
   context.fillStyle = shine;
   context.fillRect(0, 0, width, height);
 
-  const reflection = context.createLinearGradient(width * -.1, height * .82, width * .7, height * .12);
+  const reflection = context.createLinearGradient(width * .18, 0, width * .72, height);
   reflection.addColorStop(0, "rgba(255,255,255,0)");
-  reflection.addColorStop(.42, "rgba(255,255,255,0)");
-  reflection.addColorStop(.5, color === "#101010" ? "rgba(255,255,255,.5)" : "rgba(255,255,255,.38)");
-  reflection.addColorStop(.56, color === "#101010" ? "rgba(255,255,255,.22)" : "rgba(255,255,255,.15)");
-  reflection.addColorStop(.66, "rgba(255,255,255,0)");
+  reflection.addColorStop(.5, "rgba(255,255,255,0)");
+  reflection.addColorStop(.57, color === "#101010" ? "rgba(255,255,255,.48)" : "rgba(255,255,255,.36)");
+  reflection.addColorStop(.63, color === "#101010" ? "rgba(255,255,255,.18)" : "rgba(255,255,255,.12)");
+  reflection.addColorStop(.74, "rgba(255,255,255,0)");
   context.fillStyle = reflection;
   context.fillRect(0, 0, width, height);
 
-  const softReflection = context.createRadialGradient(width * .38, height * .28, 0, width * .38, height * .28, width * .44);
-  softReflection.addColorStop(0, "rgba(255,255,255,.22)");
-  softReflection.addColorStop(.5, "rgba(255,255,255,.06)");
-  softReflection.addColorStop(1, "rgba(255,255,255,0)");
+  const softReflection = context.createLinearGradient(0, height * .16, width, height * .78);
+  softReflection.addColorStop(0, "rgba(255,255,255,0)");
+  softReflection.addColorStop(.36, "rgba(255,244,218,0)");
+  softReflection.addColorStop(.48, "rgba(255,248,226,.26)");
+  softReflection.addColorStop(.58, "rgba(255,248,226,.14)");
+  softReflection.addColorStop(.76, "rgba(255,255,255,0)");
   context.fillStyle = softReflection;
   context.fillRect(0, 0, width, height);
-
-  context.globalCompositeOperation = "overlay";
-  context.globalAlpha = color === "paint:candy-apple-red" ? .46 : .3;
-  context.fillStyle = color === "paint:candy-apple-red" ? "#ff3c2f" : "#ffffff";
-  for (let x = -width; x < width * 2; x += 22) {
-    context.fillRect(x, 0, 2, height);
-  }
   context.restore();
   context.globalCompositeOperation = "source-over";
   context.globalAlpha = 1;
