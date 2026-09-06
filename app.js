@@ -9,7 +9,7 @@ let viewer3dReady = false;
 
 const defaults = {
   topWood: "Klon falisty",
-  topColor: "#d6a824",
+  topColor: "burst:sunshine",
   topFinish: "Gloss",
   sideWood: "Jednolity kolor",
   sideColor: "#101010",
@@ -48,6 +48,24 @@ const finishColors = [
   ["Czarny", "#101010"],
   ["Biały", "#f2eee6"],
   ["Kremowy", "#d8c39a"]
+];
+
+const burstColors = [
+  ["Bez barwnika", "natural", "natural"],
+  ["Evil green", "burst:evil-green", "linear-gradient(135deg, #06150b 0%, #14502d 35%, #79b957 100%)"],
+  ["Devil red", "burst:devil-red", "linear-gradient(135deg, #170203 0%, #9b1512 42%, #e07821 100%)"],
+  ["Purple rain", "burst:purple-rain", "linear-gradient(135deg, #12051d 0%, #61307f 48%, #1b66b0 100%)"],
+  ["Sunshine", "burst:sunshine", "linear-gradient(135deg, #6f2d08 0%, #db7e21 48%, #f0c83a 100%)"],
+  ["Foggy", "burst:foggy", "linear-gradient(135deg, #060606 0%, #565b5f 52%, #c1b9a7 100%)"]
+];
+
+const darkWoodColors = finishColors.filter(([name]) => !["Szary", "Biały"].includes(name));
+
+const solidPaintColors = [
+  ["Czarny metallic", "#101010", "radial-gradient(circle at 35% 25%, #4a4a46 0%, #101010 42%, #020202 100%)"],
+  ["Biały metallic", "#f2eee6", "radial-gradient(circle at 35% 25%, #ffffff 0%, #eee8db 48%, #bcb8b0 100%)"],
+  ["Kremowy metallic", "#d8c39a", "radial-gradient(circle at 35% 25%, #fff2cb 0%, #d8c39a 50%, #9c8358 100%)"],
+  ["Candy red metallic", "solid:candy-red", "radial-gradient(circle at 35% 25%, #ff6a54 0%, #b51616 48%, #350304 100%)"]
 ];
 
 const bindingOptions = [
@@ -97,12 +115,16 @@ const frontReferenceTransform = { scale: .7727, x: 173, y: 205 };
 
 function renderPalettes() {
   ["top", "side"].forEach(kind => {
-    const selected = defaults[`${kind}Color`];
+    const input = document.querySelector(`#${kind}Color`);
+    const palette = colorPaletteForWood(fieldValue(`${kind}Wood`) || defaults[`${kind}Wood`]);
+    const current = input?.value || defaults[`${kind}Color`];
+    const selected = palette.some(([, color]) => color === current) ? current : palette[0][1];
+    if (input && input.value !== selected) input.value = selected;
     const target = `${kind}Color`;
     const container = document.querySelector(`#${kind}ColorChoices`);
-    container.innerHTML = finishColors.map(([name, color]) => `
+    container.innerHTML = palette.map(([name, color, swatch]) => `
       <button class="finish-color${color === selected ? " active" : ""}" type="button" data-target="${target}" data-color="${color}" title="${name}" aria-label="${name}">
-        <span class="${color === "natural" ? "natural-color" : ""}"${color === "natural" ? "" : ` style="background:${color}"`}></span>
+        <span class="${color === "natural" ? "natural-color" : ""}"${color === "natural" ? "" : ` style="background:${swatch || color}"`}></span>
         <small>${name}</small>
       </button>
     `).join("");
@@ -117,13 +139,28 @@ function renderPalettes() {
   `).join("");
 }
 
+function normalizedWood(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function colorPaletteForWood(wood) {
+  const label = normalizedWood(wood);
+  if (label.includes("jednolity")) return solidPaintColors;
+  if (label.includes("klon") || label.includes("topola")) return burstColors;
+  return darkWoodColors;
+}
+
 function fieldValue(name) {
   const checked = form.querySelector(`[name="${name}"]:checked`);
   return checked ? checked.value : form.elements[name]?.value || "";
 }
 
-function selectedColorName(value) {
-  return finishColors.find(([, color]) => color === value)?.[0] || value;
+function selectedColorName(value, wood = "") {
+  const allColors = wood ? colorPaletteForWood(wood) : [...finishColors, ...burstColors, ...solidPaintColors];
+  return allColors.find(([, color]) => color === value)?.[0] || value;
 }
 
 function loadImage(src) {
@@ -207,12 +244,42 @@ function solidLayer(mask, color) {
   if (!mask) return blankLayer();
   const layer = createCanvas();
   const layerCtx = layer.getContext("2d");
-  layerCtx.fillStyle = color === "natural" ? "#d6b27a" : color;
+  layerCtx.fillStyle = resolveSolidPaintColor(color);
   layerCtx.fillRect(0, 0, layer.width, layer.height);
+  applySolidPaintFinish(layerCtx, layer.width, layer.height, color);
   layerCtx.globalCompositeOperation = "destination-in";
   layerCtx.drawImage(mask, 0, 0);
   layerCtx.globalCompositeOperation = "source-over";
   return layer;
+}
+
+function resolveSolidPaintColor(color) {
+  if (color === "natural") return "#d6b27a";
+  if (color === "solid:candy-red") return "#b51616";
+  return color;
+}
+
+function applySolidPaintFinish(context, width, height, color) {
+  context.save();
+  context.globalCompositeOperation = "screen";
+  const shine = context.createLinearGradient(width * .12, height * .08, width * .86, height * .92);
+  shine.addColorStop(0, "rgba(255,255,255,.22)");
+  shine.addColorStop(.24, "rgba(255,255,255,.04)");
+  shine.addColorStop(.48, "rgba(255,255,255,.16)");
+  shine.addColorStop(.72, "rgba(255,255,255,.02)");
+  shine.addColorStop(1, "rgba(255,255,255,.12)");
+  context.fillStyle = shine;
+  context.fillRect(0, 0, width, height);
+
+  context.globalCompositeOperation = "overlay";
+  context.globalAlpha = color === "solid:candy-red" ? .34 : .2;
+  context.fillStyle = color === "solid:candy-red" ? "#ff3c2f" : "#ffffff";
+  for (let x = -width; x < width * 2; x += 22) {
+    context.fillRect(x, 0, 2, height);
+  }
+  context.restore();
+  context.globalCompositeOperation = "source-over";
+  context.globalAlpha = 1;
 }
 
 function textureForWood(wood, color) {
@@ -248,6 +315,59 @@ function drawCoverTexture(targetCtx, texture, wood) {
   targetCtx.restore();
 }
 
+function burstDefinition(color) {
+  return {
+    "burst:evil-green": { edge: "#06150b", mid: "#14502d", center: "#84bf58" },
+    "burst:devil-red": { edge: "#150202", mid: "#9b1512", center: "#e07922" },
+    "burst:purple-rain": { edge: "#12051d", mid: "#63307f", center: "#1b66b0" },
+    "burst:sunshine": { edge: "#71310a", mid: "#db7e21", center: "#f0c83a" },
+    "burst:foggy": { edge: "#070707", mid: "#54595e", center: "#beb7a8" }
+  }[color] || null;
+}
+
+function applyBurstColor(context, width, height, color) {
+  const burst = burstDefinition(color);
+  if (!burst) return false;
+
+  context.save();
+  context.globalCompositeOperation = "multiply";
+  context.globalAlpha = .34;
+  context.fillStyle = "#050505";
+  context.fillRect(0, 0, width, height);
+
+  const radial = context.createRadialGradient(width * .5, height * .5, width * .08, width * .5, height * .5, width * .62);
+  radial.addColorStop(0, burst.center);
+  radial.addColorStop(.48, burst.mid);
+  radial.addColorStop(1, burst.edge);
+  context.globalCompositeOperation = "color";
+  context.globalAlpha = .98;
+  context.fillStyle = radial;
+  context.fillRect(0, 0, width, height);
+
+  const edgeShade = context.createRadialGradient(width * .5, height * .5, width * .28, width * .5, height * .5, width * .68);
+  edgeShade.addColorStop(0, "rgba(255,255,255,0)");
+  edgeShade.addColorStop(.58, "rgba(0,0,0,.1)");
+  edgeShade.addColorStop(1, "rgba(0,0,0,.72)");
+  context.globalCompositeOperation = "multiply";
+  context.globalAlpha = .72;
+  context.fillStyle = edgeShade;
+  context.fillRect(0, 0, width, height);
+
+  const centerLift = context.createRadialGradient(width * .5, height * .46, 0, width * .5, height * .46, width * .42);
+  centerLift.addColorStop(0, "rgba(255,238,180,.3)");
+  centerLift.addColorStop(.62, "rgba(255,255,255,.04)");
+  centerLift.addColorStop(1, "rgba(255,255,255,0)");
+  context.globalCompositeOperation = "screen";
+  context.globalAlpha = .42;
+  context.fillStyle = centerLift;
+  context.fillRect(0, 0, width, height);
+
+  context.restore();
+  context.globalCompositeOperation = "source-over";
+  context.globalAlpha = 1;
+  return true;
+}
+
 function woodLayer(mask, color, wood, finish) {
   if (!mask) return blankLayer();
   if (wood === "Jednolity kolor") return solidLayer(mask, color);
@@ -260,7 +380,9 @@ function woodLayer(mask, color, wood, finish) {
 
   if (color !== "natural") {
     const vivid = wood === "Klon falisty" || wood === "Topola czeczot";
-    if (vivid) {
+    if (vivid && applyBurstColor(layerCtx, layer.width, layer.height, color)) {
+      // Burst handles its own depth and color blend.
+    } else if (vivid) {
       layerCtx.globalCompositeOperation = "multiply";
       layerCtx.globalAlpha = wood === "Topola czeczot" ? .2 : .26;
       layerCtx.fillStyle = "#050505";
@@ -581,8 +703,8 @@ function drawCanvas(force = false) {
 
 function updateSummary() {
   const data = new FormData(form);
-  const topColor = selectedColorName(data.get("topColor"));
-  const sideColor = selectedColorName(data.get("sideColor"));
+  const topColor = selectedColorName(data.get("topColor"), data.get("topWood"));
+  const sideColor = selectedColorName(data.get("sideColor"), data.get("sideWood"));
   const rows = [
     ["Top", `${data.get("topWood")} / ${topColor} / ${data.get("topFinish")}`],
     ["Boki", `${data.get("sideWood")} / ${sideColor} / ${data.get("sideFinish")}`],
@@ -702,6 +824,9 @@ form.addEventListener("input", () => {
 });
 
 form.addEventListener("change", event => {
+  if (event.target?.name === "topWood" || event.target?.name === "sideWood") {
+    renderPalettes();
+  }
   if (event.target?.name === "hardwareColor") {
     applyHardwarePreset(event.target.value);
     window.weirdoViewer3d?.rerender?.();

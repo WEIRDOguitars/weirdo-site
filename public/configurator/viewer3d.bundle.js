@@ -34241,7 +34241,8 @@ void main() {
     context.filter = "none";
     forceOpaqueCanvas(context, width, height);
     if (color !== "natural") {
-      if (vivid && (area2 === "top" || area2 === "sides")) {
+      if (vivid && (area2 === "top" || area2 === "sides") && paintBurstTint(context, width, height, color)) {
+      } else if (vivid && (area2 === "top" || area2 === "sides")) {
         context.globalCompositeOperation = "multiply";
         context.globalAlpha = key === "poplarBurl" ? 0.22 : 0.28;
         context.fillStyle = "#050505";
@@ -34274,6 +34275,52 @@ void main() {
     texture.needsUpdate = true;
     tintedTextureCache.set(cacheKey, texture);
     return texture.clone();
+  }
+  function burstDefinition(color) {
+    return {
+      "burst:evil-green": { edge: "#06150b", mid: "#14502d", center: "#84bf58" },
+      "burst:devil-red": { edge: "#150202", mid: "#9b1512", center: "#e07922" },
+      "burst:purple-rain": { edge: "#12051d", mid: "#63307f", center: "#1b66b0" },
+      "burst:sunshine": { edge: "#71310a", mid: "#db7e21", center: "#f0c83a" },
+      "burst:foggy": { edge: "#070707", mid: "#54595e", center: "#beb7a8" }
+    }[color] || null;
+  }
+  function paintBurstTint(context, width, height, color) {
+    const burst = burstDefinition(color);
+    if (!burst) return false;
+    context.save();
+    context.globalCompositeOperation = "multiply";
+    context.globalAlpha = 0.34;
+    context.fillStyle = "#050505";
+    context.fillRect(0, 0, width, height);
+    const radial = context.createRadialGradient(width * 0.5, height * 0.5, width * 0.08, width * 0.5, height * 0.5, width * 0.62);
+    radial.addColorStop(0, burst.center);
+    radial.addColorStop(0.48, burst.mid);
+    radial.addColorStop(1, burst.edge);
+    context.globalCompositeOperation = "color";
+    context.globalAlpha = 0.98;
+    context.fillStyle = radial;
+    context.fillRect(0, 0, width, height);
+    const edgeShade = context.createRadialGradient(width * 0.5, height * 0.5, width * 0.28, width * 0.5, height * 0.5, width * 0.68);
+    edgeShade.addColorStop(0, "rgba(255,255,255,0)");
+    edgeShade.addColorStop(0.58, "rgba(0,0,0,.1)");
+    edgeShade.addColorStop(1, "rgba(0,0,0,.72)");
+    context.globalCompositeOperation = "multiply";
+    context.globalAlpha = 0.72;
+    context.fillStyle = edgeShade;
+    context.fillRect(0, 0, width, height);
+    const centerLift = context.createRadialGradient(width * 0.5, height * 0.46, 0, width * 0.5, height * 0.46, width * 0.42);
+    centerLift.addColorStop(0, "rgba(255,238,180,.3)");
+    centerLift.addColorStop(0.62, "rgba(255,255,255,.04)");
+    centerLift.addColorStop(1, "rgba(255,255,255,0)");
+    context.globalCompositeOperation = "screen";
+    context.globalAlpha = 0.42;
+    context.fillStyle = centerLift;
+    context.fillRect(0, 0, width, height);
+    context.restore();
+    context.globalCompositeOperation = "source-over";
+    context.globalAlpha = 1;
+    return true;
   }
   function paintGlossIntoTexture(context, width, height, area2) {
     const side = area2 === "sides";
@@ -34499,13 +34546,21 @@ void main() {
       toneMapped: true
     });
   }
+  function resolveSolidPaintColor(color) {
+    if (color === "natural") return "#d7b37a";
+    if (color === "solid:candy-red") return "#b51616";
+    return color;
+  }
   function woodMaterial(wood, color, finish, area2 = "top") {
     const useFlatSurface = area2 === "top" || area2 === "sides" || area2 === "head";
     if (wood === "Jednolity kolor") {
+      const candy = color === "solid:candy-red";
       const materialOptions2 = {
-        color: color === "natural" ? "#d7b37a" : color,
-        roughness: finish === "Gloss" ? 0.26 : 0.62,
-        clearcoat: finish === "Gloss" ? 0.68 : 0.08,
+        color: resolveSolidPaintColor(color),
+        roughness: finish === "Gloss" ? candy ? 0.2 : 0.24 : 0.58,
+        clearcoat: finish === "Gloss" ? candy ? 0.9 : 0.74 : 0.12,
+        clearcoatRoughness: finish === "Gloss" ? 0.09 : 0.42,
+        metalness: candy ? 0.08 : 0.03,
         side: FrontSide
       };
       return useFlatSurface ? flatWoodMaterial(materialOptions2) : physicalMaterial(materialOptions2);

@@ -251,7 +251,9 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   forceOpaqueCanvas(context, width, height);
 
   if (color !== "natural") {
-    if (vivid && (area === "top" || area === "sides")) {
+    if (vivid && (area === "top" || area === "sides") && paintBurstTint(context, width, height, color)) {
+      // Burst handles its own depth and color blend.
+    } else if (vivid && (area === "top" || area === "sides")) {
       context.globalCompositeOperation = "multiply";
       context.globalAlpha = key === "poplarBurl" ? .22 : .28;
       context.fillStyle = "#050505";
@@ -287,6 +289,59 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   texture.needsUpdate = true;
   tintedTextureCache.set(cacheKey, texture);
   return texture.clone();
+}
+
+function burstDefinition(color) {
+  return {
+    "burst:evil-green": { edge: "#06150b", mid: "#14502d", center: "#84bf58" },
+    "burst:devil-red": { edge: "#150202", mid: "#9b1512", center: "#e07922" },
+    "burst:purple-rain": { edge: "#12051d", mid: "#63307f", center: "#1b66b0" },
+    "burst:sunshine": { edge: "#71310a", mid: "#db7e21", center: "#f0c83a" },
+    "burst:foggy": { edge: "#070707", mid: "#54595e", center: "#beb7a8" }
+  }[color] || null;
+}
+
+function paintBurstTint(context, width, height, color) {
+  const burst = burstDefinition(color);
+  if (!burst) return false;
+
+  context.save();
+  context.globalCompositeOperation = "multiply";
+  context.globalAlpha = .34;
+  context.fillStyle = "#050505";
+  context.fillRect(0, 0, width, height);
+
+  const radial = context.createRadialGradient(width * .5, height * .5, width * .08, width * .5, height * .5, width * .62);
+  radial.addColorStop(0, burst.center);
+  radial.addColorStop(.48, burst.mid);
+  radial.addColorStop(1, burst.edge);
+  context.globalCompositeOperation = "color";
+  context.globalAlpha = .98;
+  context.fillStyle = radial;
+  context.fillRect(0, 0, width, height);
+
+  const edgeShade = context.createRadialGradient(width * .5, height * .5, width * .28, width * .5, height * .5, width * .68);
+  edgeShade.addColorStop(0, "rgba(255,255,255,0)");
+  edgeShade.addColorStop(.58, "rgba(0,0,0,.1)");
+  edgeShade.addColorStop(1, "rgba(0,0,0,.72)");
+  context.globalCompositeOperation = "multiply";
+  context.globalAlpha = .72;
+  context.fillStyle = edgeShade;
+  context.fillRect(0, 0, width, height);
+
+  const centerLift = context.createRadialGradient(width * .5, height * .46, 0, width * .5, height * .46, width * .42);
+  centerLift.addColorStop(0, "rgba(255,238,180,.3)");
+  centerLift.addColorStop(.62, "rgba(255,255,255,.04)");
+  centerLift.addColorStop(1, "rgba(255,255,255,0)");
+  context.globalCompositeOperation = "screen";
+  context.globalAlpha = .42;
+  context.fillStyle = centerLift;
+  context.fillRect(0, 0, width, height);
+
+  context.restore();
+  context.globalCompositeOperation = "source-over";
+  context.globalAlpha = 1;
+  return true;
 }
 
 function paintGlossIntoTexture(context, width, height, area) {
@@ -634,13 +689,22 @@ function glossCoatMaterial(role) {
   });
 }
 
+function resolveSolidPaintColor(color) {
+  if (color === "natural") return "#d7b37a";
+  if (color === "solid:candy-red") return "#b51616";
+  return color;
+}
+
 function woodMaterial(wood, color, finish, area = "top") {
   const useFlatSurface = area === "top" || area === "sides" || area === "head";
   if (wood === "Jednolity kolor") {
+    const candy = color === "solid:candy-red";
     const materialOptions = {
-      color: color === "natural" ? "#d7b37a" : color,
-      roughness: finish === "Gloss" ? .26 : .62,
-      clearcoat: finish === "Gloss" ? .68 : .08,
+      color: resolveSolidPaintColor(color),
+      roughness: finish === "Gloss" ? candy ? .2 : .24 : .58,
+      clearcoat: finish === "Gloss" ? candy ? .9 : .74 : .12,
+      clearcoatRoughness: finish === "Gloss" ? .09 : .42,
+      metalness: candy ? .08 : .03,
       side: THREE.FrontSide
     };
     return useFlatSurface ? flatWoodMaterial(materialOptions) : physicalMaterial(materialOptions);
