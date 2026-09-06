@@ -251,6 +251,12 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   forceOpaqueCanvas(context, width, height);
 
   if (color !== "natural") {
+    if (vivid && (area === "top" || area === "sides")) {
+      context.globalCompositeOperation = "multiply";
+      context.globalAlpha = key === "poplarBurl" ? .22 : .28;
+      context.fillStyle = "#050505";
+      context.fillRect(0, 0, width, height);
+    }
     context.globalCompositeOperation = "color";
     context.globalAlpha = vivid ? .96 : .88;
     context.fillStyle = color;

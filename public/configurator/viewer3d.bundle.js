@@ -34241,6 +34241,12 @@ void main() {
     context.filter = "none";
     forceOpaqueCanvas(context, width, height);
     if (color !== "natural") {
+      if (vivid && (area2 === "top" || area2 === "sides")) {
+        context.globalCompositeOperation = "multiply";
+        context.globalAlpha = key === "poplarBurl" ? 0.22 : 0.28;
+        context.fillStyle = "#050505";
+        context.fillRect(0, 0, width, height);
+      }
       context.globalCompositeOperation = "color";
       context.globalAlpha = vivid ? 0.96 : 0.88;
       context.fillStyle = color;
