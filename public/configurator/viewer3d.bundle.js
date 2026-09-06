@@ -34244,7 +34244,9 @@ void main() {
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
-    const vivid = key === "mapleFlame" || key === "poplarBurl";
+    const isMaple = key === "mapleFlame";
+    const isPoplar = key === "poplarBurl";
+    const vivid = isMaple || isPoplar;
     const baseColors = {
       mapleFlame: "#c79242",
       poplarBurl: "#b88745",
@@ -34255,7 +34257,7 @@ void main() {
     };
     context.fillStyle = color === "natural" ? "#d2aa6a" : baseColors[key] || "#8a6040";
     context.fillRect(0, 0, width, height);
-    context.filter = color === "natural" ? vivid ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : vivid ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
+    context.filter = color === "natural" ? isMaple ? "contrast(1.04) brightness(1) saturate(1.02)" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
     context.drawImage(image, 0, 0, width, height);
     context.filter = "none";
     forceOpaqueCanvas(context, width, height);
@@ -34265,7 +34267,7 @@ void main() {
       } else {
         if (vivid && (area2 === "top" || area2 === "sides")) {
           context.globalCompositeOperation = "multiply";
-          context.globalAlpha = key === "poplarBurl" ? 0.22 : 0.28;
+          context.globalAlpha = isMaple ? 0.12 : 0.22;
           context.fillStyle = "#050505";
           context.fillRect(0, 0, width, height);
         }
@@ -34274,7 +34276,7 @@ void main() {
         context.fillStyle = color;
         context.fillRect(0, 0, width, height);
         context.globalCompositeOperation = "multiply";
-        context.globalAlpha = vivid ? 0.5 : 0.34;
+        context.globalAlpha = isMaple ? 0.28 : vivid ? 0.5 : 0.34;
         context.fillRect(0, 0, width, height);
       }
     }

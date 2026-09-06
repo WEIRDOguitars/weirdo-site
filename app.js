@@ -321,8 +321,8 @@ function drawCoverTexture(targetCtx, texture, wood, color = "") {
   const cropScale = wood === "Topola czeczot" ? 1.16 : 1;
   targetCtx.save();
   targetCtx.filter = color === "natural"
-    ? wood === "Klon falisty" ? "contrast(1.16) brightness(.98) saturate(1.06)" : wood === "Topola czeczot" ? "contrast(1.12) brightness(.98) saturate(1.04)" : "contrast(1.08) brightness(.92) saturate(1.04)"
-    : wood === "Klon falisty" ? "contrast(1.45) brightness(.68)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
+    ? wood === "Klon falisty" ? "contrast(1.02) brightness(1) saturate(1.02)" : wood === "Topola czeczot" ? "contrast(1.12) brightness(.98) saturate(1.04)" : "contrast(1.08) brightness(.92) saturate(1.04)"
+    : wood === "Klon falisty" ? "contrast(1.08) brightness(.92) saturate(1.03)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
 
   if (rotate) {
     const rotatedW = canvas.height;
@@ -419,7 +419,7 @@ function woodLayer(mask, color, wood, finish) {
     } else {
       if (vivid) {
         layerCtx.globalCompositeOperation = "multiply";
-        layerCtx.globalAlpha = wood === "Topola czeczot" ? .2 : .26;
+        layerCtx.globalAlpha = wood === "Klon falisty" ? .12 : .2;
         layerCtx.fillStyle = "#050505";
         layerCtx.fillRect(0, 0, layer.width, layer.height);
       }
@@ -428,7 +428,7 @@ function woodLayer(mask, color, wood, finish) {
       layerCtx.fillStyle = color;
       layerCtx.fillRect(0, 0, layer.width, layer.height);
       layerCtx.globalCompositeOperation = "multiply";
-      layerCtx.globalAlpha = vivid ? .24 : .18;
+      layerCtx.globalAlpha = wood === "Klon falisty" ? .14 : vivid ? .24 : .18;
       layerCtx.fillRect(0, 0, layer.width, layer.height);
     }
   }
