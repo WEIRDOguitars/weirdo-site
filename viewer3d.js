@@ -125,7 +125,8 @@ globalThis.weirdoViewer3d = {
       role: mesh.userData.role || "",
       forceRole: mesh.userData.forceRole || "",
       visible: mesh.visible,
-      triangleCount: Math.round((mesh.geometry?.attributes?.position?.count || 0) / 3)
+      triangleCount: Math.round((mesh.geometry?.attributes?.position?.count || 0) / 3),
+      center: meshWorldCenter(mesh).toArray().map(value => Math.round(value * 100) / 100)
     }));
   },
   rerender: applyMaterials
@@ -478,6 +479,106 @@ function roleBounds(role, predicate = null) {
     found = true;
   });
   return found ? box : null;
+}
+
+function meshWorldBox(mesh) {
+  mesh.updateWorldMatrix(true, false);
+  return new THREE.Box3().setFromObject(mesh);
+}
+
+function meshWorldCenter(mesh) {
+  return meshWorldBox(mesh).getCenter(new THREE.Vector3());
+}
+
+function meshRoleBounds(role, predicate = null) {
+  const box = new THREE.Box3();
+  let found = false;
+  meshes.forEach(mesh => {
+    if (mesh.userData.role !== role || mesh.userData.glossCoat || mesh.userData.surfaceSkin) return;
+    if (predicate && !predicate(mesh)) return;
+    box.expandByObject(mesh);
+    found = true;
+  });
+  return found ? box : null;
+}
+
+function roleVariantBounds(role, variant) {
+  return meshRoleBounds(role, mesh => (mesh.userData.geometryVariant || "default") === variant);
+}
+
+function roleVariantRoots(role, variant) {
+  const roots = new Set();
+  meshes.forEach(mesh => {
+    if (mesh.userData.role !== role || (mesh.userData.geometryVariant || "default") !== variant) return;
+    if (mesh.userData.glossCoat || mesh.userData.surfaceSkin) return;
+    let root = mesh;
+    while (root.parent && root.parent !== model) root = root.parent;
+    roots.add(root);
+  });
+  return roots;
+}
+
+function alignGeometryVariantToDefault(variant) {
+  if (variant === "default") return;
+  ["top", "sides"].forEach(role => {
+    const reference = roleVariantBounds(role, "default");
+    const target = roleVariantBounds(role, variant);
+    if (!reference || !target) return;
+
+    const referenceCenter = reference.getCenter(new THREE.Vector3());
+    const targetCenter = target.getCenter(new THREE.Vector3());
+    const delta = new THREE.Vector3(
+      referenceCenter.x - targetCenter.x,
+      referenceCenter.y - targetCenter.y,
+      reference.max.z - target.max.z
+    );
+    roleVariantRoots(role, variant).forEach(root => moveObjectInWorld(root, delta));
+  });
+  model.updateWorldMatrix(true, true);
+}
+
+function alignGeometryVariantsToDefault() {
+  Object.keys(electronicsGeometryVariants).forEach(alignGeometryVariantToDefault);
+}
+
+function electronicsMeshName(mesh) {
+  return materialName(mesh);
+}
+
+function pickupAreaCenter() {
+  const pickupBox = meshRoleBounds("pickupFrame") || meshRoleBounds("pickupCenter") || meshRoleBounds("pickupMagnets");
+  return pickupBox ? pickupBox.getCenter(new THREE.Vector3()) : new THREE.Vector3(0, 0, 0);
+}
+
+function onePickupKeepKnobMesh() {
+  const knobs = meshes.filter(mesh => mesh.userData.role === "knobs");
+  if (!knobs.length) return null;
+  const pickupCenter = pickupAreaCenter();
+  return knobs.reduce((best, mesh) => {
+    const center = meshWorldCenter(mesh);
+    const distance = center.distanceTo(pickupCenter);
+    return !best || distance < best.distance ? { mesh, distance } : best;
+  }, null)?.mesh || knobs[0];
+}
+
+function isUpperPickupMesh(mesh) {
+  if (!["pickupFrame", "pickupCenter", "pickupMagnets", "pickup"].includes(mesh.userData.role)) return false;
+  const pickupBox = meshRoleBounds("pickupFrame") || meshRoleBounds("pickupCenter") || meshRoleBounds("pickupMagnets");
+  if (!pickupBox) return false;
+  const splitY = pickupBox.getCenter(new THREE.Vector3()).y;
+  return meshWorldCenter(mesh).y > splitY;
+}
+
+function isSwitchMesh(mesh) {
+  return electronicsMeshName(mesh).includes("switch");
+}
+
+function isHiddenForElectronicsVariant(mesh, activeVariant) {
+  if (activeVariant !== "onePickup") return false;
+  if (isUpperPickupMesh(mesh)) return true;
+  if (isSwitchMesh(mesh)) return true;
+  if (mesh.userData.role === "knobs") return mesh !== onePickupKeepKnobMesh();
+  return false;
 }
 
 function moveObjectInWorld(object, worldDelta) {
@@ -974,6 +1075,10 @@ function applyMaterials() {
       mesh.visible = false;
       return;
     }
+    if (isHiddenForElectronicsVariant(mesh, activeVariant)) {
+      mesh.visible = false;
+      return;
+    }
     mesh.visible = true;
     mesh.material = materialForRole(mesh.userData.role);
     mesh.material.transparent = false;
@@ -1450,6 +1555,7 @@ async function init() {
     }
     meshes.push(child);
   });
+  alignGeometryVariantsToDefault();
   liftRoleAbove("top", ["sides", "body"], .12);
   addRoleSurfaceSkin("top", "TopCleanSurfaceSkin", .085);
   addRoleGlossCoat("top", "TopGlossCoat", .075);
