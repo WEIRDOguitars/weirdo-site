@@ -18,13 +18,11 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function safeFilename(value: string) {
+function safeAttachmentName(value: string) {
   return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase()
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
     .slice(0, 60);
 }
 
@@ -81,7 +79,7 @@ export async function POST(request: Request) {
       )
       .join("");
     const subjectName = modelName ? ` - ${modelName}` : "";
-    const filenameName = safeFilename(modelName || customerName) || "konfiguracja";
+    const attachmentName = safeAttachmentName(modelName || customerName) || "Konfiguracja";
     const copyEmail = process.env.CONFIGURATOR_COPY_EMAIL || DEFAULT_COPY_EMAIL;
     const sendCustomerCopy = process.env.CONFIGURATOR_SEND_CUSTOMER_EMAIL === "true";
     const copyRecipients =
@@ -111,7 +109,7 @@ export async function POST(request: Request) {
           </div>`,
         attachments: [
           {
-            filename: `weirdo-${filenameName}-${Date.now()}.jpg`,
+            filename: `WEIRDO - ${attachmentName}.jpg`,
             content: image.replace("data:image/jpeg;base64,", "")
           }
         ]
