@@ -419,7 +419,7 @@ function woodLayer(mask, color, wood, finish) {
     } else {
       if (vivid) {
         layerCtx.globalCompositeOperation = "multiply";
-        layerCtx.globalAlpha = wood === "Klon falisty" ? .12 : .2;
+        layerCtx.globalAlpha = wood === "Klon falisty" ? .18 : .2;
         layerCtx.fillStyle = "#050505";
         layerCtx.fillRect(0, 0, layer.width, layer.height);
       }
@@ -428,7 +428,7 @@ function woodLayer(mask, color, wood, finish) {
       layerCtx.fillStyle = color;
       layerCtx.fillRect(0, 0, layer.width, layer.height);
       layerCtx.globalCompositeOperation = "multiply";
-      layerCtx.globalAlpha = wood === "Klon falisty" ? .14 : vivid ? .24 : .18;
+      layerCtx.globalAlpha = wood === "Klon falisty" ? .3 : vivid ? .24 : .18;
       layerCtx.fillRect(0, 0, layer.width, layer.height);
     }
   }

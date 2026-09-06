@@ -248,6 +248,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   const source = textures[key];
   const image = source?.image;
   if (!image) return textureMap(key, repeatX, repeatY, rotation);
+  if (key === "mapleFlame" && color === "natural") return textureMap(key, repeatX, repeatY, rotation);
 
   const cacheKey = `${key}|${color}|${area}|${finish}|${repeatX}|${repeatY}|${rotation}`;
   if (tintedTextureCache.has(cacheKey)) return tintedTextureCache.get(cacheKey).clone();
@@ -292,7 +293,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
     } else {
       if (vivid && tintableWoodArea) {
         context.globalCompositeOperation = "multiply";
-        context.globalAlpha = isMaple ? .12 : .22;
+        context.globalAlpha = isMaple ? .18 : .22;
         context.fillStyle = "#050505";
         context.fillRect(0, 0, width, height);
       }
@@ -301,7 +302,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
       context.fillStyle = color;
       context.fillRect(0, 0, width, height);
       context.globalCompositeOperation = "multiply";
-      context.globalAlpha = isMaple ? .28 : vivid ? .5 : .34;
+      context.globalAlpha = isMaple ? .38 : vivid ? .5 : .34;
       context.fillRect(0, 0, width, height);
     }
   }
@@ -436,7 +437,7 @@ function selectedTopTexture(wood, color, area = "top", finish = "Mat") {
   const label = normalizedLabel(wood);
 
   if (label.includes("jednolity")) return null;
-  if (label.includes("klon")) return tintedTextureMap("mapleFlame", color, area, finish, 1, 1);
+  if (label.includes("klon")) return color === "natural" ? textureMap("mapleFlame", 1, 1) : tintedTextureMap("mapleFlame", color, area, finish, 1, 1);
   if (label.includes("topola")) return tintedTextureMap("poplarBurl", color, area, finish, 1, 1);
   if (label.includes("mahon")) return tintedTextureMap("topMahogany", color, area, finish, 1, 1);
   if (label.includes("orzech")) return tintedTextureMap("topWalnut", color, area, finish, 1, 1);
@@ -771,7 +772,7 @@ function flatWoodMaterial(options) {
     alphaTest: 0,
     depthWrite: true,
     side: THREE.FrontSide,
-    toneMapped: true
+    toneMapped: options.toneMapped ?? true
   });
 }
 
@@ -871,13 +872,15 @@ function woodMaterial(wood, color, finish, area = "top") {
   }
 
   const tint = color === "natural" ? "#ffffff" : color;
+  const label = normalizedLabel(wood);
   const materialOptions = {
     color: color === "natural" ? tint : "#ffffff",
     map: selectedTopTexture(wood, color, area, finish),
     roughness: finish === "Gloss" ? .25 : .58,
     clearcoat: finish === "Gloss" ? .82 : .08,
     clearcoatRoughness: finish === "Gloss" ? .12 : .48,
-    side: THREE.FrontSide
+    side: THREE.FrontSide,
+    toneMapped: !(label.includes("klon") && color === "natural")
   };
   return useFlatSurface ? flatWoodMaterial(materialOptions) : physicalMaterial(materialOptions);
 }
