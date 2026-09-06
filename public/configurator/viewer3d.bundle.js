@@ -34064,6 +34064,16 @@ void main() {
     binding: `${assetBase}/elementy/model 3d/bindig korpus.3mf`,
     metalLogo: `${assetBase}/elementy/model 3d/logo metal.3mf`
   };
+  var electronicsGeometryVariants = {
+    default: {
+      top: layerModelPaths.top,
+      sides: layerModelPaths.sides
+    },
+    onePickup: {
+      top: `${assetBase}/elementy/model 3d/Modyfikacje/1 pickup/top 1 pickup.3mf`,
+      sides: `${assetBase}/elementy/model 3d/Modyfikacje/1 pickup/Boki 1 pickup.3mf`
+    }
+  };
   var metalLogoImagePath = `${assetBase}/assets/logo-weirdo.png`;
   var texturePaths = {
     mapleBirdseye: `${assetBase}/tekstury/runtime/maple-birdseye.png`,
@@ -34167,6 +34177,11 @@ void main() {
   }
   function normalizedLabel(value) {
     return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+  function activeElectronicsVariant() {
+    const layout = normalizedLabel(fieldValue("electronicsLayout"));
+    if (layout.includes("1 pickup")) return "onePickup";
+    return "default";
   }
   function loadTexture(key, path) {
     let texture;
@@ -34762,12 +34777,17 @@ void main() {
     return bodyMaterial();
   }
   function applyMaterials() {
+    const activeVariant = activeElectronicsVariant();
     meshes.forEach((mesh) => {
       if (mesh.userData.preserveMaterial) {
         mesh.material.needsUpdate = true;
         return;
       }
       if (mesh.userData.glossCoat) {
+        mesh.visible = false;
+        return;
+      }
+      if ((mesh.userData.role === "top" || mesh.userData.role === "sides") && (mesh.userData.geometryVariant || "default") !== activeVariant) {
         mesh.visible = false;
         return;
       }
@@ -34993,6 +35013,13 @@ void main() {
       child.receiveShadow = role !== "binding";
     });
   }
+  function tagGeometryVariant(object, variant) {
+    object.userData.geometryVariant = variant;
+    object.traverse((child) => {
+      if (!child.isMesh) return;
+      child.userData.geometryVariant = variant;
+    });
+  }
   function isNamedLayerMesh(mesh, expectedName) {
     return normalizedLabel(mesh.name || "") === normalizedLabel(expectedName);
   }
@@ -35064,23 +35091,34 @@ void main() {
     container.dataset.viewerStatus = "loading-models";
     const loader = new FBXLoader();
     const layerLoader = new ThreeMFLoader();
-    const [mainModel, topModel, sidesModel, bodyBindingModel, metalLogoModel] = await Promise.all([
+    const variantLayerPromises = Object.entries(electronicsGeometryVariants).flatMap(([variant, paths]) => [
+      layerLoader.loadAsync(encodeURI(paths.top)).then((layer) => ({ variant, role: "top", layer })),
+      layerLoader.loadAsync(encodeURI(paths.sides)).then((layer) => ({ variant, role: "sides", layer }))
+    ]);
+    const [mainModel, variantLayers, bodyBindingModel, metalLogoModel] = await Promise.all([
       loader.loadAsync(encodeURI(modelPath)),
-      layerLoader.loadAsync(encodeURI(layerModelPaths.top)),
-      layerLoader.loadAsync(encodeURI(layerModelPaths.sides)),
+      Promise.all(variantLayerPromises),
       layerLoader.loadAsync(encodeURI(layerModelPaths.binding)),
       layerLoader.loadAsync(encodeURI(layerModelPaths.metalLogo))
     ]);
-    prepareForcedLayerModel(topModel, "top", "TopLayer3MF", 2, (child) => isNamedLayerMesh(child, "Top"));
-    keepOuterSurfaceFaces(topModel, 0.9, 0.025);
-    prepareForcedLayerModel(sidesModel, "sides", "SidesLayer3MF", 1);
+    variantLayers.forEach(({ variant, role, layer }) => {
+      const isDefaultTop = variant === "default" && role === "top";
+      prepareForcedLayerModel(
+        layer,
+        role,
+        `${variant === "default" ? "" : `${variant}-`}${role === "top" ? "TopLayer3MF" : "SidesLayer3MF"}`,
+        role === "top" ? 2 : 1,
+        isDefaultTop ? (child) => isNamedLayerMesh(child, "Top") : null
+      );
+      tagGeometryVariant(layer, variant);
+      if (role === "top") keepOuterSurfaceFaces(layer, 0.9, 0.025);
+    });
     prepareForcedLayerModel(bodyBindingModel, "binding", "BodyBindingKorpus", 4);
     prepareForcedLayerModel(metalLogoModel, "metalLogo", "MetalLogo3MF", 8);
     model = new Group();
     model.name = "WeirdoConfiguredModel";
     model.add(mainModel);
-    model.add(topModel);
-    model.add(sidesModel);
+    variantLayers.forEach(({ layer }) => model.add(layer));
     model.add(bodyBindingModel);
     container.dataset.viewerStatus = "models-loaded";
     normalizeModel(model);
