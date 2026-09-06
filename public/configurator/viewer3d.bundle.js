@@ -34162,13 +34162,31 @@ void main() {
         center: meshWorldCenter(mesh).toArray().map((value) => Math.round(value * 100) / 100)
       }));
     },
-    rerender: applyMaterials
+    rerender: applyMaterials,
+    captureImage: captureViewerImage
   };
   function updateViewerDebug(reason = "render") {
     container.dataset.viewerReason = reason;
     container.dataset.fittedHeight = String(Math.round(fittedHeight * 1e3) / 1e3);
     container.dataset.fixedViewHeight = String(Math.round((fixedViewHeight || 0) * 1e3) / 1e3);
     container.dataset.cameraZoom = String(Math.round(camera.zoom * 1e3) / 1e3);
+  }
+  function captureViewerImage(options = {}) {
+    if (!renderer || !model) return null;
+    const previousFrame = frameSlider.value;
+    const previousZoom = zoomSlider.value;
+    const frame = options.frame ?? 0;
+    const zoom = options.zoom ?? 0;
+    const type = options.type || "image/jpeg";
+    const quality = options.quality ?? 0.9;
+    frameSlider.value = String(frame);
+    zoomSlider.value = String(zoom);
+    updateView();
+    const image = renderer.domElement.toDataURL(type, quality);
+    frameSlider.value = previousFrame;
+    zoomSlider.value = previousZoom;
+    updateView();
+    return image;
   }
   function fieldValue(name) {
     const checked = form.querySelector(`[name="${name}"]:checked`);
@@ -35308,7 +35326,7 @@ void main() {
     const targetWorld = new Vector3(
       bodyBox.min.x + bodySize.x * 0.375,
       bodyBox.max.y - bodySize.y * 0.13,
-      topBox.max.z + 4.8
+      topBox.max.z + 6.8
     );
     object.position.copy(model.worldToLocal(targetWorld.clone()));
     object.updateWorldMatrix(true, true);

@@ -5,6 +5,7 @@ const loading = document.querySelector("#canvasLoading");
 const stageWrap = document.querySelector(".stage-wrap");
 const frameSlider = document.querySelector("#frameSlider");
 const zoomSlider = document.querySelector("#zoomSlider");
+const backgroundSelect = document.querySelector("#backgroundSelect");
 let viewer3dReady = false;
 let wheelZoomTarget = null;
 let wheelZoomFrame = 0;
@@ -766,6 +767,7 @@ function updateSummary() {
   const topColor = selectedColorName(data.get("topColor"), data.get("topWood"));
   const sideColor = selectedColorName(data.get("sideColor"), data.get("sideWood"));
   const rows = [
+    ["Nazwa modelu", data.get("modelName") || "Bez nazwy"],
     ["Top", `${data.get("topWood")} / ${topColor} / ${data.get("topFinish")}`],
     ["Boki", `${data.get("sideWood")} / ${sideColor} / ${data.get("sideFinish")}`],
     ["Podstrunnica", `${data.get("fretboard")} / markery ${data.get("binding")} / progi ${data.get("fretMaterial")}`],
@@ -809,6 +811,27 @@ function getSummaryItems() {
   }));
 }
 
+function captureConfigurationImage() {
+  const captured = window.weirdoViewer3d?.captureImage?.({
+    frame: 0,
+    zoom: 0,
+    type: "image/jpeg",
+    quality: .9
+  });
+  if (captured) return captured;
+
+  const previousFrame = frameSlider.value;
+  const previousZoom = zoomSlider.value;
+  frameSlider.value = "0";
+  zoomSlider.value = "0";
+  drawCanvas(true);
+  const image = canvas.toDataURL("image/jpeg", .9);
+  frameSlider.value = previousFrame;
+  zoomSlider.value = previousZoom;
+  drawCanvas(true);
+  return image;
+}
+
 function resetForm() {
   form.reset();
   document.querySelector("#topColor").value = defaults.topColor;
@@ -816,10 +839,19 @@ function resetForm() {
   applyPickupPreset(defaults.pickups);
   frameSlider.value = "0";
   zoomSlider.value = "0";
+  if (backgroundSelect) backgroundSelect.value = "studio";
+  applyPreviewBackground();
   renderPalettes();
   window.weirdoViewer3d?.rerender?.();
   drawCanvas();
   updateSummary();
+}
+
+function applyPreviewBackground() {
+  if (!stageWrap) return;
+  const value = backgroundSelect?.value || "studio";
+  stageWrap.classList.toggle("stage-bg-black", value === "black");
+  stageWrap.classList.toggle("stage-bg-light", value === "light");
 }
 
 function zoomPreviewByWheel(event) {
@@ -936,6 +968,7 @@ form.addEventListener("change", event => {
 
 frameSlider.addEventListener("input", drawCanvas);
 zoomSlider.addEventListener("input", drawCanvas);
+backgroundSelect?.addEventListener("change", applyPreviewBackground);
 stageWrap?.addEventListener("wheel", zoomPreviewByWheel, { passive: false });
 document.querySelector("#resetButton").addEventListener("click", resetForm);
 
@@ -972,12 +1005,14 @@ form.addEventListener("submit", async event => {
   submitButton.textContent = "Wysyłanie...";
 
   try {
+    const image = captureConfigurationImage();
     const payload = {
+      modelName: form.elements.modelName.value,
       customerName: form.elements.customerName.value,
       customerEmail: form.elements.customerEmail.value,
       website: form.elements.website.value,
       summary: getSummaryItems(),
-      image: canvas.toDataURL("image/jpeg", .88)
+      image
     };
 
     const response = await fetch("/api/send-configuration", {

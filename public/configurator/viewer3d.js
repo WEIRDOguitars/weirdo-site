@@ -130,7 +130,8 @@ globalThis.weirdoViewer3d = {
       center: meshWorldCenter(mesh).toArray().map(value => Math.round(value * 100) / 100)
     }));
   },
-  rerender: applyMaterials
+  rerender: applyMaterials,
+  captureImage: captureViewerImage
 };
 
 function updateViewerDebug(reason = "render") {
@@ -138,6 +139,26 @@ function updateViewerDebug(reason = "render") {
   container.dataset.fittedHeight = String(Math.round(fittedHeight * 1000) / 1000);
   container.dataset.fixedViewHeight = String(Math.round((fixedViewHeight || 0) * 1000) / 1000);
   container.dataset.cameraZoom = String(Math.round(camera.zoom * 1000) / 1000);
+}
+
+function captureViewerImage(options = {}) {
+  if (!renderer || !model) return null;
+
+  const previousFrame = frameSlider.value;
+  const previousZoom = zoomSlider.value;
+  const frame = options.frame ?? 0;
+  const zoom = options.zoom ?? 0;
+  const type = options.type || "image/jpeg";
+  const quality = options.quality ?? .9;
+
+  frameSlider.value = String(frame);
+  zoomSlider.value = String(zoom);
+  updateView();
+  const image = renderer.domElement.toDataURL(type, quality);
+  frameSlider.value = previousFrame;
+  zoomSlider.value = previousZoom;
+  updateView();
+  return image;
 }
 
 function fieldValue(name) {
@@ -1506,7 +1527,7 @@ function createMetalLogoLayer(texture) {
   const desiredWorldPosition = new THREE.Vector3(
     bodyBox.min.x + bodySize.x * .405,
     bodyBox.max.y - bodySize.y * .075,
-    topBox.max.z + Math.max(topSize.z * .42, 1.8)
+    topBox.max.z + Math.max(topSize.z * .68, 2.8)
   );
   mesh.position.copy(model.worldToLocal(desiredWorldPosition));
   return mesh;
@@ -1535,7 +1556,7 @@ function alignMetalLogoGeometryLayer(object) {
   const targetWorld = new THREE.Vector3(
     bodyBox.min.x + bodySize.x * .375,
     bodyBox.max.y - bodySize.y * .13,
-    topBox.max.z + 4.8
+    topBox.max.z + 6.8
   );
   object.position.copy(model.worldToLocal(targetWorld.clone()));
   object.updateWorldMatrix(true, true);

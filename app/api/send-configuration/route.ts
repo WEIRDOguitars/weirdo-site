@@ -18,6 +18,16 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function safeFilename(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase()
+    .slice(0, 60);
+}
+
 export async function POST(request: Request) {
   const apiKey = process.env.RESEND_API_KEY;
 
@@ -30,6 +40,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+    const modelName = String(body.modelName || "").trim().slice(0, 120);
     const customerName = String(body.customerName || "").trim().slice(0, 120);
     const customerEmail = String(body.customerEmail || "").trim().slice(0, 200);
     const website = String(body.website || "").trim();
@@ -69,6 +80,8 @@ export async function POST(request: Request) {
           </tr>`
       )
       .join("");
+    const subjectName = modelName ? ` - ${modelName}` : "";
+    const filenameName = safeFilename(modelName || customerName) || "konfiguracja";
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -80,17 +93,18 @@ export async function POST(request: Request) {
         from: process.env.CONFIGURATOR_FROM_EMAIL || "WEIRDO Configurator <onboarding@resend.dev>",
         to: [RECIPIENT],
         reply_to: customerEmail,
-        subject: `Nowa konfiguracja WEIRDO - ${customerName}`,
+        subject: `Nowa konfiguracja WEIRDO${subjectName} - ${customerName}`,
         html: `
           <div style="font-family:Arial,sans-serif;max-width:760px;margin:0 auto;color:#171512">
             <h1 style="margin-bottom:8px">Nowa konfiguracja gitary WEIRDO</h1>
+            ${modelName ? `<h2 style="margin-top:0;color:#171512">${escapeHtml(modelName)}</h2>` : ""}
             <p style="margin-top:0;color:#746f66">Klient: <strong>${escapeHtml(customerName)}</strong><br>E-mail: <a href="mailto:${escapeHtml(customerEmail)}">${escapeHtml(customerEmail)}</a></p>
             <table style="width:100%;border-collapse:collapse;margin-top:24px">${rows}</table>
             <p style="margin-top:24px;color:#746f66">Wizualizacja konfiguracji znajduje się w załączniku.</p>
           </div>`,
         attachments: [
           {
-            filename: `weirdo-konfiguracja-${Date.now()}.jpg`,
+            filename: `weirdo-${filenameName}-${Date.now()}.jpg`,
             content: image.replace("data:image/jpeg;base64,", "")
           }
         ]

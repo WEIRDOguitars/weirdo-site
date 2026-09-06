@@ -35,6 +35,13 @@
         <label class="range-field">Zbliżenie
           <input id="zoomSlider" type="range" min="0" max="100" step="0.1" value="0">
         </label>
+        <label class="background-field">Tło
+          <select id="backgroundSelect" aria-label="Tło podglądu">
+            <option value="studio" selected>Studio</option>
+            <option value="black">Czarne</option>
+            <option value="light">Jasne</option>
+          </select>
+        </label>
       </div>
 
       <div class="preview-caption">
@@ -261,7 +268,11 @@
         <section class="config-block summary-block">
           <div class="section-heading"><span>10</span><div><h2>Podsumowanie</h2><p>Aktualny zestaw wyborów do dalszej wyceny.</p></div></div>
           <div class="summary-list" id="summaryList"></div>
-          <div class="contact-grid"><label>Imię i nazwisko<input name="customerName" type="text" autocomplete="name" placeholder="Jan Kowalski" maxlength="120"></label><label>E-mail<input name="customerEmail" type="email" autocomplete="email" placeholder="jan@email.com" maxlength="200"></label></div>
+          <div class="contact-grid">
+            <label>Nazwa modelu<input name="modelName" type="text" placeholder="np. Purple Storm" maxlength="120"></label>
+            <label>Imię i nazwisko<input name="customerName" type="text" autocomplete="name" placeholder="Jan Kowalski" maxlength="120"></label>
+            <label>E-mail<input name="customerEmail" type="email" autocomplete="email" placeholder="jan@email.com" maxlength="200"></label>
+          </div>
           <input class="form-trap" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
           <button class="primary-button" type="submit">Wyślij konfigurację</button>
           <p class="submit-note">Wysłanie formularza nie jest zamówieniem. Szczegóły i wycenę potwierdzimy osobno.</p>

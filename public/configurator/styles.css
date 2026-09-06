@@ -130,6 +130,26 @@ legend {
   transform: none;
 }
 
+.stage-wrap.stage-bg-black {
+  background: #050505;
+}
+
+.stage-wrap.stage-bg-black .stage-glow {
+  opacity: .18;
+  background: radial-gradient(circle, rgba(255,255,255,.12), rgba(255,255,255,.04) 36%, transparent 70%);
+}
+
+.stage-wrap.stage-bg-light {
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.94) 0, rgba(237, 231, 218, .9) 42%, rgba(210, 200, 184, .75) 100%),
+    #eee9df;
+}
+
+.stage-wrap.stage-bg-light .stage-glow {
+  opacity: .42;
+  background: radial-gradient(circle, rgba(255,255,255,.82), rgba(210,190,160,.22) 42%, transparent 72%);
+}
+
 #guitarCanvas {
   position: relative;
   z-index: 1;
@@ -189,7 +209,7 @@ legend {
 
 .viewer-controls {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(150px, .8fr);
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, .8fr) minmax(92px, .38fr);
   gap: 12px;
   align-items: end;
 }
@@ -221,6 +241,39 @@ legend {
   font-size: 10px;
   letter-spacing: .12em;
   text-transform: uppercase;
+}
+
+.background-field {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.background-field select {
+  width: 100%;
+  height: 29px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  font: inherit;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 0 24px 0 10px;
+  cursor: pointer;
+}
+
+.background-field select:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+
+.background-field option {
+  background: #141310;
+  color: var(--text);
 }
 
 input[type="range"] {
@@ -786,7 +839,7 @@ textarea {
 
 .contact-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   margin: 28px 0 16px;
 }
@@ -802,6 +855,12 @@ textarea {
   display: block;
   margin-top: 9px;
   text-transform: none;
+}
+
+@media (max-width: 880px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .primary-button {
@@ -905,7 +964,7 @@ textarea {
   }
 
   .viewer-controls {
-    grid-template-columns: repeat(2, minmax(120px, 1fr));
+    grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) minmax(86px, .55fr);
     gap: 8px;
   }
 
@@ -917,6 +976,11 @@ textarea {
   }
 
   .range-field {
+    font-size: 9px;
+    letter-spacing: .09em;
+  }
+
+  .background-field {
     font-size: 9px;
     letter-spacing: .09em;
   }
@@ -977,7 +1041,7 @@ textarea {
     left: 0;
     right: 0;
     z-index: 9;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 86px;
     gap: 7px;
     padding: 8px 12px 12px;
     margin-top: 0;
@@ -987,6 +1051,16 @@ textarea {
 
   .range-field {
     grid-column: auto;
+  }
+
+  .background-field {
+    grid-column: auto;
+  }
+
+  .background-field select {
+    height: 27px;
+    padding: 0 18px 0 7px;
+    font-size: 8px;
   }
 
   .preview-caption {
