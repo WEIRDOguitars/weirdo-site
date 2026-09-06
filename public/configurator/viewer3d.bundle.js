@@ -34308,15 +34308,19 @@ void main() {
       "burst:foggy": { edge: "#070707", mid: "#54595e", center: "#beb7a8" }
     }[color] || null;
   }
+  function burstCenter(width, height) {
+    return { x: width * 0.54, y: height * 0.5 };
+  }
   function paintBurstTint(context, width, height, color) {
     const burst = burstDefinition(color);
     if (!burst) return false;
+    const center = burstCenter(width, height);
     context.save();
     context.globalCompositeOperation = "multiply";
     context.globalAlpha = 0.34;
     context.fillStyle = "#050505";
     context.fillRect(0, 0, width, height);
-    const radial = context.createRadialGradient(width * 0.5, height * 0.5, width * 0.08, width * 0.5, height * 0.5, width * 0.62);
+    const radial = context.createRadialGradient(center.x, center.y, width * 0.08, center.x, center.y, width * 0.62);
     radial.addColorStop(0, burst.center);
     radial.addColorStop(0.48, burst.mid);
     radial.addColorStop(1, burst.edge);
@@ -34324,7 +34328,7 @@ void main() {
     context.globalAlpha = 0.98;
     context.fillStyle = radial;
     context.fillRect(0, 0, width, height);
-    const edgeShade = context.createRadialGradient(width * 0.5, height * 0.5, width * 0.28, width * 0.5, height * 0.5, width * 0.68);
+    const edgeShade = context.createRadialGradient(center.x, center.y, width * 0.28, center.x, center.y, width * 0.68);
     edgeShade.addColorStop(0, "rgba(255,255,255,0)");
     edgeShade.addColorStop(0.58, "rgba(0,0,0,.1)");
     edgeShade.addColorStop(1, "rgba(0,0,0,.72)");
@@ -34332,7 +34336,7 @@ void main() {
     context.globalAlpha = 0.72;
     context.fillStyle = edgeShade;
     context.fillRect(0, 0, width, height);
-    const centerLift = context.createRadialGradient(width * 0.5, height * 0.46, 0, width * 0.5, height * 0.46, width * 0.42);
+    const centerLift = context.createRadialGradient(center.x, height * 0.46, 0, center.x, height * 0.46, width * 0.42);
     centerLift.addColorStop(0, "rgba(255,238,180,.3)");
     centerLift.addColorStop(0.62, "rgba(255,255,255,.04)");
     centerLift.addColorStop(1, "rgba(255,255,255,0)");

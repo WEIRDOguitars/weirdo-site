@@ -353,9 +353,14 @@ function burstDefinition(color) {
   }[color] || null;
 }
 
+function burstCenter(width, height) {
+  return { x: width * .54, y: height * .5 };
+}
+
 function applyBurstColor(context, width, height, color) {
   const burst = burstDefinition(color);
   if (!burst) return false;
+  const center = burstCenter(width, height);
 
   context.save();
   context.globalCompositeOperation = "multiply";
@@ -363,7 +368,7 @@ function applyBurstColor(context, width, height, color) {
   context.fillStyle = "#050505";
   context.fillRect(0, 0, width, height);
 
-  const radial = context.createRadialGradient(width * .5, height * .5, width * .08, width * .5, height * .5, width * .62);
+  const radial = context.createRadialGradient(center.x, center.y, width * .08, center.x, center.y, width * .62);
   radial.addColorStop(0, burst.center);
   radial.addColorStop(.48, burst.mid);
   radial.addColorStop(1, burst.edge);
@@ -372,7 +377,7 @@ function applyBurstColor(context, width, height, color) {
   context.fillStyle = radial;
   context.fillRect(0, 0, width, height);
 
-  const edgeShade = context.createRadialGradient(width * .5, height * .5, width * .28, width * .5, height * .5, width * .68);
+  const edgeShade = context.createRadialGradient(center.x, center.y, width * .28, center.x, center.y, width * .68);
   edgeShade.addColorStop(0, "rgba(255,255,255,0)");
   edgeShade.addColorStop(.58, "rgba(0,0,0,.1)");
   edgeShade.addColorStop(1, "rgba(0,0,0,.72)");
@@ -381,7 +386,7 @@ function applyBurstColor(context, width, height, color) {
   context.fillStyle = edgeShade;
   context.fillRect(0, 0, width, height);
 
-  const centerLift = context.createRadialGradient(width * .5, height * .46, 0, width * .5, height * .46, width * .42);
+  const centerLift = context.createRadialGradient(center.x, height * .46, 0, center.x, height * .46, width * .42);
   centerLift.addColorStop(0, "rgba(255,238,180,.3)");
   centerLift.addColorStop(.62, "rgba(255,255,255,.04)");
   centerLift.addColorStop(1, "rgba(255,255,255,0)");
