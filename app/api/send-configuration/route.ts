@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { list, put } from "@vercel/blob";
 
 const DEFAULT_COPY_EMAIL = "weirdoguitars@gmail.com";
 const MAX_IMAGE_LENGTH = 4_500_000;
@@ -24,6 +25,91 @@ function safeAttachmentName(value: string) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 60);
+}
+
+function safeStorageName(value: string) {
+  return safeAttachmentName(value).replace(/\.+$/g, "") || "Konfiguracja";
+}
+
+function todayFolder() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function nextAvailableSubmissionPath(basePath: string) {
+  const existing = await list({
+    prefix: basePath,
+    limit: 1000
+  });
+  const names = new Set(existing.blobs.map(blob => blob.pathname));
+
+  if (!names.has(`${basePath}.json`)) return basePath;
+
+  for (let index = 2; index < 1000; index += 1) {
+    const candidate = `${basePath} (${index})`;
+    if (!names.has(`${candidate}.json`)) return candidate;
+  }
+
+  return `${basePath} (${Date.now()})`;
+}
+
+async function saveConfigurationSubmission({
+  modelName,
+  customerName,
+  customerEmail,
+  summary,
+  image
+}: {
+  modelName: string;
+  customerName: string;
+  customerEmail: string;
+  summary: SummaryItem[];
+  image: string;
+}) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+
+  const submittedAt = new Date().toISOString();
+  const title = safeStorageName(modelName || "Bez nazwy");
+  const customer = safeStorageName(customerName || customerEmail);
+  const folder = `configurations/${todayFolder()}`;
+  const basePath = await nextAvailableSubmissionPath(`${folder}/WEIRDO - ${title} - ${customer}`);
+  const imageContent = image.replace("data:image/jpeg;base64,", "");
+
+  const imageBlob = await put(`${basePath}.jpg`, Buffer.from(imageContent, "base64"), {
+    access: "private",
+    contentType: "image/jpeg",
+    addRandomSuffix: false
+  });
+
+  const dataBlob = await put(
+    `${basePath}.json`,
+    JSON.stringify(
+      {
+        submittedAt,
+        modelName: modelName || "Bez nazwy",
+        customer: {
+          name: customerName,
+          email: customerEmail
+        },
+        summary,
+        image: {
+          pathname: imageBlob.pathname,
+          url: imageBlob.url
+        }
+      },
+      null,
+      2
+    ),
+    {
+      access: "private",
+      contentType: "application/json",
+      addRandomSuffix: false
+    }
+  );
+
+  return {
+    dataPath: dataBlob.pathname,
+    imagePath: imageBlob.pathname
+  };
 }
 
 export async function POST(request: Request) {
@@ -124,7 +210,20 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true });
+    let savedSubmission = null;
+    try {
+      savedSubmission = await saveConfigurationSubmission({
+        modelName,
+        customerName,
+        customerEmail,
+        summary: cleanSummary,
+        image
+      });
+    } catch (storageError) {
+      console.error("Configuration storage error", storageError);
+    }
+
+    return NextResponse.json({ ok: true, saved: Boolean(savedSubmission) });
   } catch (error) {
     console.error("Configuration email error", error);
     return NextResponse.json(
