@@ -83,8 +83,11 @@ export async function POST(request: Request) {
     const subjectName = modelName ? ` - ${modelName}` : "";
     const filenameName = safeFilename(modelName || customerName) || "konfiguracja";
     const copyEmail = process.env.CONFIGURATOR_COPY_EMAIL || DEFAULT_COPY_EMAIL;
+    const sendCustomerCopy = process.env.CONFIGURATOR_SEND_CUSTOMER_EMAIL === "true";
     const copyRecipients =
       copyEmail.toLowerCase() === customerEmail.toLowerCase() ? [] : [copyEmail];
+    const recipients = sendCustomerCopy ? [customerEmail] : [copyEmail];
+    const bccRecipients = sendCustomerCopy ? copyRecipients : [];
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -94,9 +97,9 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         from: process.env.CONFIGURATOR_FROM_EMAIL || "WEIRDO Configurator <onboarding@resend.dev>",
-        to: [customerEmail],
-        bcc: copyRecipients.length ? copyRecipients : undefined,
-        reply_to: copyEmail,
+        to: recipients,
+        bcc: bccRecipients.length ? bccRecipients : undefined,
+        reply_to: sendCustomerCopy ? copyEmail : customerEmail,
         subject: `Nowa konfiguracja WEIRDO${subjectName} - ${customerName}`,
         html: `
           <div style="font-family:Arial,sans-serif;max-width:760px;margin:0 auto;color:#171512">
