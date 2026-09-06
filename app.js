@@ -65,9 +65,9 @@ const burstColors = [
 const darkWoodColors = finishColors.filter(([name]) => !["Szary", "Biały", "Kremowy"].includes(name));
 
 const solidPaintColors = [
+  ["Black", "#101010", "radial-gradient(circle at 35% 25%, #252525 0%, #101010 46%, #020202 100%)"],
   ["Cream White", "paint:cream-white", "radial-gradient(circle at 35% 25%, #fff2d2 0%, #dac394 50%, #987d52 100%)"],
   ["Pearl White", "paint:pearl-white", "radial-gradient(circle at 35% 25%, #ffffff 0%, #e8e4d6 48%, #aeb6b8 100%)"],
-  ["Black", "#101010", "radial-gradient(circle at 35% 25%, #252525 0%, #101010 46%, #020202 100%)"],
   ["Metallic Black", "paint:metallic-black", "radial-gradient(circle at 35% 25%, #64645f 0%, #131313 45%, #020202 100%)"],
   ["Candy apple red", "paint:candy-apple-red", "radial-gradient(circle at 35% 25%, #ff5b42 0%, #b51616 48%, #350304 100%)"]
 ];
@@ -255,6 +255,7 @@ function solidLayer(mask, color) {
   const paint = paintTextureForColor(color);
   if (paint) {
     drawCoverTexture(layerCtx, paint, "Jednolity kolor", color);
+    applySolidPaintFinish(layerCtx, layer.width, layer.height, color);
   } else {
     layerCtx.fillStyle = resolveSolidPaintColor(color);
     layerCtx.fillRect(0, 0, layer.width, layer.height);
@@ -288,16 +289,16 @@ function applySolidPaintFinish(context, width, height, color) {
   context.save();
   context.globalCompositeOperation = "screen";
   const shine = context.createLinearGradient(width * .12, height * .08, width * .86, height * .92);
-  shine.addColorStop(0, "rgba(255,255,255,.22)");
-  shine.addColorStop(.24, "rgba(255,255,255,.04)");
-  shine.addColorStop(.48, "rgba(255,255,255,.16)");
-  shine.addColorStop(.72, "rgba(255,255,255,.02)");
-  shine.addColorStop(1, "rgba(255,255,255,.12)");
+  shine.addColorStop(0, "rgba(255,255,255,.34)");
+  shine.addColorStop(.24, "rgba(255,255,255,.06)");
+  shine.addColorStop(.48, "rgba(255,255,255,.28)");
+  shine.addColorStop(.72, "rgba(255,255,255,.03)");
+  shine.addColorStop(1, "rgba(255,255,255,.2)");
   context.fillStyle = shine;
   context.fillRect(0, 0, width, height);
 
   context.globalCompositeOperation = "overlay";
-  context.globalAlpha = color === "paint:candy-apple-red" ? .34 : .2;
+  context.globalAlpha = color === "paint:candy-apple-red" ? .46 : .3;
   context.fillStyle = color === "paint:candy-apple-red" ? "#ff3c2f" : "#ffffff";
   for (let x = -width; x < width * 2; x += 22) {
     context.fillRect(x, 0, 2, height);
@@ -364,7 +365,7 @@ function applyBurstColor(context, width, height, color) {
 
   context.save();
   context.globalCompositeOperation = "multiply";
-  context.globalAlpha = .34;
+  context.globalAlpha = .42;
   context.fillStyle = "#050505";
   context.fillRect(0, 0, width, height);
 
@@ -373,25 +374,25 @@ function applyBurstColor(context, width, height, color) {
   radial.addColorStop(.48, burst.mid);
   radial.addColorStop(1, burst.edge);
   context.globalCompositeOperation = "color";
-  context.globalAlpha = .98;
+  context.globalAlpha = 1;
   context.fillStyle = radial;
   context.fillRect(0, 0, width, height);
 
   const edgeShade = context.createRadialGradient(center.x, center.y, width * .28, center.x, center.y, width * .68);
   edgeShade.addColorStop(0, "rgba(255,255,255,0)");
-  edgeShade.addColorStop(.58, "rgba(0,0,0,.1)");
-  edgeShade.addColorStop(1, "rgba(0,0,0,.72)");
+  edgeShade.addColorStop(.58, "rgba(0,0,0,.16)");
+  edgeShade.addColorStop(1, "rgba(0,0,0,.82)");
   context.globalCompositeOperation = "multiply";
-  context.globalAlpha = .72;
+  context.globalAlpha = .82;
   context.fillStyle = edgeShade;
   context.fillRect(0, 0, width, height);
 
   const centerLift = context.createRadialGradient(center.x, height * .46, 0, center.x, height * .46, width * .42);
-  centerLift.addColorStop(0, "rgba(255,238,180,.3)");
+  centerLift.addColorStop(0, "rgba(255,238,180,.22)");
   centerLift.addColorStop(.62, "rgba(255,255,255,.04)");
   centerLift.addColorStop(1, "rgba(255,255,255,0)");
   context.globalCompositeOperation = "screen";
-  context.globalAlpha = .42;
+  context.globalAlpha = .3;
   context.fillStyle = centerLift;
   context.fillRect(0, 0, width, height);
 
@@ -419,16 +420,16 @@ function woodLayer(mask, color, wood, finish) {
     } else {
       if (vivid) {
         layerCtx.globalCompositeOperation = "multiply";
-        layerCtx.globalAlpha = wood === "Klon falisty" ? .18 : .2;
+        layerCtx.globalAlpha = wood === "Klon falisty" ? .23 : .26;
         layerCtx.fillStyle = "#050505";
         layerCtx.fillRect(0, 0, layer.width, layer.height);
       }
       layerCtx.globalCompositeOperation = "color";
-      layerCtx.globalAlpha = vivid ? .95 : .78;
+      layerCtx.globalAlpha = vivid ? .99 : .9;
       layerCtx.fillStyle = color;
       layerCtx.fillRect(0, 0, layer.width, layer.height);
       layerCtx.globalCompositeOperation = "multiply";
-      layerCtx.globalAlpha = wood === "Klon falisty" ? .3 : vivid ? .24 : .18;
+      layerCtx.globalAlpha = wood === "Klon falisty" ? .38 : vivid ? .34 : .26;
       layerCtx.fillRect(0, 0, layer.width, layer.height);
     }
   }

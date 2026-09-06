@@ -34277,16 +34277,16 @@ void main() {
       } else {
         if (vivid && tintableWoodArea) {
           context.globalCompositeOperation = "multiply";
-          context.globalAlpha = isMaple ? 0.18 : 0.22;
+          context.globalAlpha = isMaple ? 0.23 : 0.27;
           context.fillStyle = "#050505";
           context.fillRect(0, 0, width, height);
         }
         context.globalCompositeOperation = "color";
-        context.globalAlpha = vivid ? 0.96 : 0.88;
+        context.globalAlpha = vivid ? 0.99 : 0.94;
         context.fillStyle = color;
         context.fillRect(0, 0, width, height);
         context.globalCompositeOperation = "multiply";
-        context.globalAlpha = isMaple ? 0.38 : vivid ? 0.5 : 0.34;
+        context.globalAlpha = isMaple ? 0.46 : vivid ? 0.58 : 0.42;
         context.fillRect(0, 0, width, height);
       }
     }
@@ -34329,7 +34329,7 @@ void main() {
     const center = burstCenter(width, height);
     context.save();
     context.globalCompositeOperation = "multiply";
-    context.globalAlpha = 0.34;
+    context.globalAlpha = 0.42;
     context.fillStyle = "#050505";
     context.fillRect(0, 0, width, height);
     const radial = context.createRadialGradient(center.x, center.y, width * 0.08, center.x, center.y, width * 0.62);
@@ -34337,23 +34337,23 @@ void main() {
     radial.addColorStop(0.48, burst.mid);
     radial.addColorStop(1, burst.edge);
     context.globalCompositeOperation = "color";
-    context.globalAlpha = 0.98;
+    context.globalAlpha = 1;
     context.fillStyle = radial;
     context.fillRect(0, 0, width, height);
     const edgeShade = context.createRadialGradient(center.x, center.y, width * 0.28, center.x, center.y, width * 0.68);
     edgeShade.addColorStop(0, "rgba(255,255,255,0)");
-    edgeShade.addColorStop(0.58, "rgba(0,0,0,.1)");
-    edgeShade.addColorStop(1, "rgba(0,0,0,.72)");
+    edgeShade.addColorStop(0.58, "rgba(0,0,0,.16)");
+    edgeShade.addColorStop(1, "rgba(0,0,0,.82)");
     context.globalCompositeOperation = "multiply";
-    context.globalAlpha = 0.72;
+    context.globalAlpha = 0.82;
     context.fillStyle = edgeShade;
     context.fillRect(0, 0, width, height);
     const centerLift = context.createRadialGradient(center.x, height * 0.46, 0, center.x, height * 0.46, width * 0.42);
-    centerLift.addColorStop(0, "rgba(255,238,180,.3)");
+    centerLift.addColorStop(0, "rgba(255,238,180,.22)");
     centerLift.addColorStop(0.62, "rgba(255,255,255,.04)");
     centerLift.addColorStop(1, "rgba(255,255,255,0)");
     context.globalCompositeOperation = "screen";
-    context.globalAlpha = 0.42;
+    context.globalAlpha = 0.3;
     context.fillStyle = centerLift;
     context.fillRect(0, 0, width, height);
     context.restore();
@@ -34702,13 +34702,24 @@ void main() {
       toneMapped: options.toneMapped ?? true
     });
   }
+  function roleWood(role) {
+    if (role === "sides") return fieldValue("sideWood");
+    if (role === "head") {
+      const headMode = fieldValue("headMode");
+      if (headMode === "Jak boki") return fieldValue("sideWood");
+    }
+    return fieldValue("topWood");
+  }
   function glossCoatMaterial(role) {
     const finish = role === "sides" ? fieldValue("sideFinish") : fieldValue("topFinish");
     const enabled = finish === "Gloss";
+    const solidPaint = normalizedLabel(roleWood(role)).includes("jednolity");
+    const opacity = solidPaint ? role === "top" ? 0.86 : 0.68 : role === "top" ? 0.48 : 0.34;
+    const strength = solidPaint ? role === "top" ? 1.55 : 1.16 : role === "top" ? 1 : 0.72;
     return new ShaderMaterial({
       uniforms: {
-        coatOpacity: { value: enabled ? role === "top" ? 0.48 : 0.34 : 0 },
-        bandStrength: { value: role === "top" ? 1 : 0.72 },
+        coatOpacity: { value: enabled ? opacity : 0 },
+        bandStrength: { value: strength },
         sweepOffset: { value: role === "top" ? -4 : 1.5 }
       },
       vertexShader: `
