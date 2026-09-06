@@ -34241,20 +34241,23 @@ void main() {
     context.filter = "none";
     forceOpaqueCanvas(context, width, height);
     if (color !== "natural") {
-      if (vivid && (area2 === "top" || area2 === "sides") && paintBurstTint(context, width, height, color)) {
-      } else if (vivid && (area2 === "top" || area2 === "sides")) {
+      const burstApplied = vivid && (area2 === "top" || area2 === "sides") && paintBurstTint(context, width, height, color);
+      if (burstApplied) {
+      } else {
+        if (vivid && (area2 === "top" || area2 === "sides")) {
+          context.globalCompositeOperation = "multiply";
+          context.globalAlpha = key === "poplarBurl" ? 0.22 : 0.28;
+          context.fillStyle = "#050505";
+          context.fillRect(0, 0, width, height);
+        }
+        context.globalCompositeOperation = "color";
+        context.globalAlpha = vivid ? 0.96 : 0.88;
+        context.fillStyle = color;
+        context.fillRect(0, 0, width, height);
         context.globalCompositeOperation = "multiply";
-        context.globalAlpha = key === "poplarBurl" ? 0.22 : 0.28;
-        context.fillStyle = "#050505";
+        context.globalAlpha = vivid ? 0.5 : 0.34;
         context.fillRect(0, 0, width, height);
       }
-      context.globalCompositeOperation = "color";
-      context.globalAlpha = vivid ? 0.96 : 0.88;
-      context.fillStyle = color;
-      context.fillRect(0, 0, width, height);
-      context.globalCompositeOperation = "multiply";
-      context.globalAlpha = vivid ? 0.5 : 0.34;
-      context.fillRect(0, 0, width, height);
     }
     context.globalCompositeOperation = "source-over";
     context.globalAlpha = 1;

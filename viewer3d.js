@@ -251,21 +251,24 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   forceOpaqueCanvas(context, width, height);
 
   if (color !== "natural") {
-    if (vivid && (area === "top" || area === "sides") && paintBurstTint(context, width, height, color)) {
+    const burstApplied = vivid && (area === "top" || area === "sides") && paintBurstTint(context, width, height, color);
+    if (burstApplied) {
       // Burst handles its own depth and color blend.
-    } else if (vivid && (area === "top" || area === "sides")) {
+    } else {
+      if (vivid && (area === "top" || area === "sides")) {
+        context.globalCompositeOperation = "multiply";
+        context.globalAlpha = key === "poplarBurl" ? .22 : .28;
+        context.fillStyle = "#050505";
+        context.fillRect(0, 0, width, height);
+      }
+      context.globalCompositeOperation = "color";
+      context.globalAlpha = vivid ? .96 : .88;
+      context.fillStyle = color;
+      context.fillRect(0, 0, width, height);
       context.globalCompositeOperation = "multiply";
-      context.globalAlpha = key === "poplarBurl" ? .22 : .28;
-      context.fillStyle = "#050505";
+      context.globalAlpha = vivid ? .5 : .34;
       context.fillRect(0, 0, width, height);
     }
-    context.globalCompositeOperation = "color";
-    context.globalAlpha = vivid ? .96 : .88;
-    context.fillStyle = color;
-    context.fillRect(0, 0, width, height);
-    context.globalCompositeOperation = "multiply";
-    context.globalAlpha = vivid ? .5 : .34;
-    context.fillRect(0, 0, width, height);
   }
   context.globalCompositeOperation = "source-over";
   context.globalAlpha = 1;

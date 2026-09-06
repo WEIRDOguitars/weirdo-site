@@ -380,21 +380,24 @@ function woodLayer(mask, color, wood, finish) {
 
   if (color !== "natural") {
     const vivid = wood === "Klon falisty" || wood === "Topola czeczot";
-    if (vivid && applyBurstColor(layerCtx, layer.width, layer.height, color)) {
+    const burstApplied = vivid && applyBurstColor(layerCtx, layer.width, layer.height, color);
+    if (burstApplied) {
       // Burst handles its own depth and color blend.
-    } else if (vivid) {
+    } else {
+      if (vivid) {
+        layerCtx.globalCompositeOperation = "multiply";
+        layerCtx.globalAlpha = wood === "Topola czeczot" ? .2 : .26;
+        layerCtx.fillStyle = "#050505";
+        layerCtx.fillRect(0, 0, layer.width, layer.height);
+      }
+      layerCtx.globalCompositeOperation = "color";
+      layerCtx.globalAlpha = vivid ? .95 : .78;
+      layerCtx.fillStyle = color;
+      layerCtx.fillRect(0, 0, layer.width, layer.height);
       layerCtx.globalCompositeOperation = "multiply";
-      layerCtx.globalAlpha = wood === "Topola czeczot" ? .2 : .26;
-      layerCtx.fillStyle = "#050505";
+      layerCtx.globalAlpha = vivid ? .24 : .18;
       layerCtx.fillRect(0, 0, layer.width, layer.height);
     }
-    layerCtx.globalCompositeOperation = "color";
-    layerCtx.globalAlpha = vivid ? .95 : .78;
-    layerCtx.fillStyle = color;
-    layerCtx.fillRect(0, 0, layer.width, layer.height);
-    layerCtx.globalCompositeOperation = "multiply";
-    layerCtx.globalAlpha = vivid ? .24 : .18;
-    layerCtx.fillRect(0, 0, layer.width, layer.height);
   }
 
   layerCtx.globalCompositeOperation = "source-over";
