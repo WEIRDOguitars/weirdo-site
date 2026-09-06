@@ -745,7 +745,7 @@ function updateSummary() {
     ["Top", `${data.get("topWood")} / ${topColor} / ${data.get("topFinish")}`],
     ["Boki", `${data.get("sideWood")} / ${sideColor} / ${data.get("sideFinish")}`],
     ["Podstrunnica", `${data.get("fretboard")} / markery ${data.get("binding")} / progi ${data.get("fretMaterial")}`],
-    ["Drewno korpusu", `${data.get("bodyWood")} / ${data.get("bodyFinish")}`],
+    ["Korpus", `${data.get("bodyWood")} / ${data.get("bodyFinish")}`],
     ["Kształt bindingu", data.get("bindingShape")],
     ["Kolor bindingu i markerów", data.get("binding")],
     ["Kolor osprzętu", data.get("hardwareColor")],
