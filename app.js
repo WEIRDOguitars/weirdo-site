@@ -321,7 +321,7 @@ function drawCoverTexture(targetCtx, texture, wood, color = "") {
   const cropScale = wood === "Topola czeczot" ? 1.16 : 1;
   targetCtx.save();
   targetCtx.filter = color === "natural"
-    ? wood === "Klon falisty" ? "contrast(1.02) brightness(1) saturate(1.02)" : wood === "Topola czeczot" ? "contrast(1.12) brightness(.98) saturate(1.04)" : "contrast(1.08) brightness(.92) saturate(1.04)"
+    ? wood === "Klon falisty" ? "none" : wood === "Topola czeczot" ? "contrast(1.12) brightness(.98) saturate(1.04)" : "contrast(1.08) brightness(.92) saturate(1.04)"
     : wood === "Klon falisty" ? "contrast(1.08) brightness(.92) saturate(1.03)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
 
   if (rotate) {

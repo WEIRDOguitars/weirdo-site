@@ -270,10 +270,14 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
     bodyAsh: "#d1b170"
   };
 
-  context.fillStyle = color === "natural" ? "#d2aa6a" : baseColors[key] || "#8a6040";
-  context.fillRect(0, 0, width, height);
+  if (!isMaple) {
+    context.fillStyle = color === "natural" ? "#d2aa6a" : baseColors[key] || "#8a6040";
+    context.fillRect(0, 0, width, height);
+  } else {
+    context.clearRect(0, 0, width, height);
+  }
   context.filter = color === "natural"
-    ? isMaple ? "contrast(1.04) brightness(1) saturate(1.02)" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)"
+    ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)"
     : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
   context.drawImage(image, 0, 0, width, height);
   context.filter = "none";
