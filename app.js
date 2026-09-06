@@ -29,7 +29,7 @@ const defaults = {
   pickupCenterColor: "Czarny",
   pickupMagnetColor: "Szare",
   bridge: "Tune-o-matic Gotoh",
-  tuners: "Do ustalenia",
+  tuners: "Gotoh SG381 MG",
   nut: "Kość",
   straplocks: "Dunlop Flushmount"
 };
