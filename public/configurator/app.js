@@ -79,7 +79,7 @@ const paths = {
   top: `${assetBase}/elementy/top.png`,
   binding: `${assetBase}/elementy/Binding/binding.png`,
   head: `${assetBase}/elementy/Head.png`,
-  fretboard: `${assetBase}/elementy/Podstrunnica/podstrunnica.png`,
+  fretboard: `${assetBase}/elementy/Podstrunnica/Podstrunnica.PNG`,
   hardware: `${assetBase}/elementy/osprzet.png`,
   knobs: `${assetBase}/elementy/galki.png`,
   nut: `${assetBase}/elementy/siodelko.png`,
@@ -143,14 +143,19 @@ async function loadImages() {
   });
 
   await Promise.all(entries.map(async ([key, src]) => {
-    images[key] = await loadImage(src);
+    try {
+      images[key] = await loadImage(src);
+    } catch (error) {
+      console.warn(error.message || error);
+      images[key] = null;
+    }
   }));
 
   ["body", "sides", "top", "binding", "head", "fretboard", "hardware", "knobs", "nut"].forEach(key => {
-    masks[key] = createMask(images[key]);
+    if (images[key]) masks[key] = createMask(images[key]);
   });
   paths.frames.forEach((_, index) => {
-    masks[`frame${index}`] = createMask(images[`frame${index}`]);
+    if (images[`frame${index}`]) masks[`frame${index}`] = createMask(images[`frame${index}`]);
   });
 }
 
@@ -159,6 +164,10 @@ function createCanvas(width = canvas.width, height = canvas.height) {
   element.width = width;
   element.height = height;
   return element;
+}
+
+function blankLayer() {
+  return createCanvas();
 }
 
 function createMask(img) {
@@ -180,6 +189,7 @@ function createMask(img) {
 }
 
 function drawMaskedBase(targetCtx, img, mask) {
+  if (!img || !mask) return;
   targetCtx.drawImage(img, 0, 0);
   targetCtx.globalCompositeOperation = "destination-in";
   targetCtx.drawImage(mask, 0, 0);
@@ -194,6 +204,7 @@ function drawTransformedLayer(targetCtx, layer, transform = frontReferenceTransf
 }
 
 function solidLayer(mask, color) {
+  if (!mask) return blankLayer();
   const layer = createCanvas();
   const layerCtx = layer.getContext("2d");
   layerCtx.fillStyle = color === "natural" ? "#d6b27a" : color;
@@ -213,6 +224,7 @@ function textureForWood(wood, color) {
 }
 
 function drawCoverTexture(targetCtx, texture, wood) {
+  if (!texture) return;
   const rotate = wood !== "Topola czeczot";
   targetCtx.save();
   targetCtx.filter = wood === "Klon falisty" ? "contrast(1.45) brightness(.68)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
@@ -237,11 +249,13 @@ function drawCoverTexture(targetCtx, texture, wood) {
 }
 
 function woodLayer(mask, color, wood, finish) {
+  if (!mask) return blankLayer();
   if (wood === "Jednolity kolor") return solidLayer(mask, color);
 
   const layer = createCanvas();
   const layerCtx = layer.getContext("2d");
   const texture = textureForWood(wood, color);
+  if (!texture) return solidLayer(mask, color);
   drawCoverTexture(layerCtx, texture, wood);
 
   if (color !== "natural") {
@@ -284,6 +298,7 @@ function woodLayer(mask, color, wood, finish) {
 }
 
 function tintOriginalLayer(img, mask, color, strength = .68) {
+  if (!img || !mask) return blankLayer();
   const layer = createCanvas();
   const layerCtx = layer.getContext("2d");
   drawMaskedBase(layerCtx, img, mask);
