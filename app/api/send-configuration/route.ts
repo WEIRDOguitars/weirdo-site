@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const RECIPIENT = "weirdoguitars@gmail.com";
+const DEFAULT_COPY_EMAIL = "weirdoguitars@gmail.com";
 const MAX_IMAGE_LENGTH = 4_500_000;
 
 type SummaryItem = { label: string; value: string };
@@ -82,6 +82,9 @@ export async function POST(request: Request) {
       .join("");
     const subjectName = modelName ? ` - ${modelName}` : "";
     const filenameName = safeFilename(modelName || customerName) || "konfiguracja";
+    const copyEmail = process.env.CONFIGURATOR_COPY_EMAIL || DEFAULT_COPY_EMAIL;
+    const copyRecipients =
+      copyEmail.toLowerCase() === customerEmail.toLowerCase() ? [] : [copyEmail];
 
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -91,8 +94,9 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         from: process.env.CONFIGURATOR_FROM_EMAIL || "WEIRDO Configurator <onboarding@resend.dev>",
-        to: [RECIPIENT],
-        reply_to: customerEmail,
+        to: [customerEmail],
+        bcc: copyRecipients.length ? copyRecipients : undefined,
+        reply_to: copyEmail,
         subject: `Nowa konfiguracja WEIRDO${subjectName} - ${customerName}`,
         html: `
           <div style="font-family:Arial,sans-serif;max-width:760px;margin:0 auto;color:#171512">
