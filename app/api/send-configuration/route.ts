@@ -1,3 +1,5 @@
+import path from "node:path";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import { NextResponse } from "next/server";
 import { list, put } from "@vercel/blob";
 
@@ -5,6 +7,20 @@ const DEFAULT_COPY_EMAIL = "weirdoguitars@gmail.com";
 const MAX_IMAGE_LENGTH = 4_500_000;
 
 type SummaryItem = { label: string; value: string };
+type SubmissionRecord = {
+  submittedAt: string;
+  modelName: string;
+  customer: {
+    name: string;
+    email: string;
+  };
+  summary: SummaryItem[];
+  image: {
+    filename: string;
+    pathname?: string;
+    url?: string;
+  };
+};
 
 function escapeHtml(value: string) {
   return value
@@ -52,26 +68,69 @@ async function nextAvailableSubmissionPath(basePath: string) {
   return `${basePath} (${Date.now()})`;
 }
 
-async function saveConfigurationSubmission({
-  modelName,
-  customerName,
-  customerEmail,
-  summary,
-  image
-}: {
-  modelName: string;
-  customerName: string;
-  customerEmail: string;
-  summary: SummaryItem[];
-  image: string;
-}) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+async function nextAvailableLocalPath(basePath: string) {
+  for (let index = 1; index < 1000; index += 1) {
+    const candidate = index === 1 ? basePath : `${basePath} (${index})`;
+    try {
+      await access(`${candidate}.json`);
+    } catch {
+      return candidate;
+    }
+  }
 
-  const submittedAt = new Date().toISOString();
-  const title = safeStorageName(modelName || "Bez nazwy");
-  const customer = safeStorageName(customerName || customerEmail);
+  return `${basePath} (${Date.now()})`;
+}
+
+async function saveLocalConfigurationSubmission({
+  record,
+  image,
+  baseName
+}: {
+  record: SubmissionRecord;
+  image: string;
+  baseName: string;
+}) {
+  if (process.env.VERCEL) return null;
+
+  const folder = path.join(process.cwd(), "data", "configurations", todayFolder());
+  await mkdir(folder, { recursive: true });
+
+  const basePath = await nextAvailableLocalPath(path.join(folder, baseName));
+  const imagePath = `${basePath}.jpg`;
+  const dataPath = `${basePath}.json`;
+  const imageContent = image.replace("data:image/jpeg;base64,", "");
+  const localRecord: SubmissionRecord = {
+    ...record,
+    image: {
+      ...record.image,
+      pathname: imagePath
+    }
+  };
+
+  await writeFile(imagePath, Buffer.from(imageContent, "base64"));
+  await writeFile(dataPath, JSON.stringify(localRecord, null, 2), "utf8");
+
+  return {
+    dataPath,
+    imagePath
+  };
+}
+
+async function saveConfigurationSubmission({
+  record,
+  image,
+  baseName
+}: {
+  record: SubmissionRecord;
+  image: string;
+  baseName: string;
+}) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return saveLocalConfigurationSubmission({ record, image, baseName });
+  }
+
   const folder = `configurations/${todayFolder()}`;
-  const basePath = await nextAvailableSubmissionPath(`${folder}/WEIRDO - ${title} - ${customer}`);
+  const basePath = await nextAvailableSubmissionPath(`${folder}/${baseName}`);
   const imageContent = image.replace("data:image/jpeg;base64,", "");
 
   const imageBlob = await put(`${basePath}.jpg`, Buffer.from(imageContent, "base64"), {
@@ -84,14 +143,9 @@ async function saveConfigurationSubmission({
     `${basePath}.json`,
     JSON.stringify(
       {
-        submittedAt,
-        modelName: modelName || "Bez nazwy",
-        customer: {
-          name: customerName,
-          email: customerEmail
-        },
-        summary,
+        ...record,
         image: {
+          ...record.image,
           pathname: imageBlob.pathname,
           url: imageBlob.url
         }
@@ -166,6 +220,23 @@ export async function POST(request: Request) {
       .join("");
     const subjectName = modelName ? ` - ${modelName}` : "";
     const attachmentName = safeAttachmentName(modelName || customerName) || "Konfiguracja";
+    const storageTitle = safeStorageName(modelName || "Bez nazwy");
+    const storageCustomer = safeStorageName(customerName || customerEmail);
+    const storageBaseName = `WEIRDO - ${storageTitle} - ${storageCustomer}`;
+    const imageFilename = `WEIRDO - ${attachmentName}.jpg`;
+    const record: SubmissionRecord = {
+      submittedAt: new Date().toISOString(),
+      modelName: modelName || "Bez nazwy",
+      customer: {
+        name: customerName,
+        email: customerEmail
+      },
+      summary: cleanSummary,
+      image: {
+        filename: imageFilename
+      }
+    };
+    const recordJson = JSON.stringify(record, null, 2);
     const copyEmail = process.env.CONFIGURATOR_COPY_EMAIL || DEFAULT_COPY_EMAIL;
     const sendCustomerCopy = process.env.CONFIGURATOR_SEND_CUSTOMER_EMAIL === "true";
     const copyRecipients =
@@ -195,8 +266,12 @@ export async function POST(request: Request) {
           </div>`,
         attachments: [
           {
-            filename: `WEIRDO - ${attachmentName}.jpg`,
+            filename: imageFilename,
             content: image.replace("data:image/jpeg;base64,", "")
+          },
+          {
+            filename: `WEIRDO - ${attachmentName}.json`,
+            content: Buffer.from(recordJson, "utf8").toString("base64")
           }
         ]
       })
@@ -213,11 +288,9 @@ export async function POST(request: Request) {
     let savedSubmission = null;
     try {
       savedSubmission = await saveConfigurationSubmission({
-        modelName,
-        customerName,
-        customerEmail,
-        summary: cleanSummary,
-        image
+        record,
+        image,
+        baseName: storageBaseName
       });
     } catch (storageError) {
       console.error("Configuration storage error", storageError);
