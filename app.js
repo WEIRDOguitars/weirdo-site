@@ -147,9 +147,10 @@ function renderPalettes() {
     `).join("");
   });
 
+  const selectedBinding = fieldValue("binding") || defaults.binding;
   document.querySelector("#bindingChoices").innerHTML = bindingOptions.map(([name, color, recommended]) => `
     <label class="swatch-label" title="${recommended ? "Rekomendowane" : name}">
-      <input type="radio" name="binding" value="${name}" data-color="${color}" ${recommended ? "checked" : ""}>
+      <input type="radio" name="binding" value="${name}" data-color="${color}" ${name === selectedBinding ? "checked" : ""}>
       <span class="color-dot" style="background:${color}"></span>
       <span>${name}</span>
     </label>
