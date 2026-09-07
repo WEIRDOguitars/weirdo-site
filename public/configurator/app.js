@@ -10,6 +10,8 @@ const modelImportInput = document.querySelector("#modelImportInput");
 let viewer3dReady = false;
 let wheelZoomTarget = null;
 let wheelZoomFrame = 0;
+const activePreviewPointers = new Map();
+let previewGesture = null;
 
 const defaults = {
   topWood: "Klon falisty",
@@ -865,6 +867,16 @@ function applyPreviewBackground() {
   stageWrap.classList.toggle("stage-bg-light", value === "light");
 }
 
+function setSliderValue(slider, value) {
+  const min = Number(slider.min || 0);
+  const max = Number(slider.max || 100);
+  const step = Number(slider.step || 1);
+  const clamped = Math.max(min, Math.min(max, value));
+  const rounded = step < 1 ? Math.round(clamped / step) * step : Math.round(clamped);
+  slider.value = String(Math.round(rounded * 10) / 10);
+  slider.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 function zoomPreviewByWheel(event) {
   if (!stageWrap?.contains(event.target)) return;
 
@@ -898,6 +910,80 @@ function animateWheelZoom() {
   zoomSlider.value = String(Math.round(next * 10) / 10);
   zoomSlider.dispatchEvent(new Event("input", { bubbles: true }));
   wheelZoomFrame = window.requestAnimationFrame(animateWheelZoom);
+}
+
+function previewPointerDistance() {
+  const points = Array.from(activePreviewPointers.values());
+  if (points.length < 2) return 0;
+  return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+}
+
+function startPreviewGesture() {
+  const points = Array.from(activePreviewPointers.values());
+  if (points.length >= 2) {
+    previewGesture = {
+      type: "pinch",
+      distance: previewPointerDistance(),
+      zoom: Number(zoomSlider.value || 0),
+      frame: Number(frameSlider.value || 0),
+      centerX: (points[0].x + points[1].x) / 2
+    };
+    return;
+  }
+
+  if (points.length === 1) {
+    previewGesture = {
+      type: "drag",
+      x: points[0].x,
+      frame: Number(frameSlider.value || 0)
+    };
+  }
+}
+
+function handlePreviewPointerDown(event) {
+  if (!stageWrap?.contains(event.target)) return;
+  if (event.target.closest(".viewer-controls, input, select, button, label")) return;
+
+  activePreviewPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  stageWrap.setPointerCapture?.(event.pointerId);
+  stageWrap.classList.add("is-touching-preview");
+  startPreviewGesture();
+}
+
+function handlePreviewPointerMove(event) {
+  if (!activePreviewPointers.has(event.pointerId) || !previewGesture) return;
+
+  event.preventDefault();
+  activePreviewPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+  if (activePreviewPointers.size >= 2 && previewGesture.type === "pinch") {
+    const distance = previewPointerDistance();
+    const nextZoom = previewGesture.zoom + (distance - previewGesture.distance) * .28;
+    const points = Array.from(activePreviewPointers.values());
+    const centerX = (points[0].x + points[1].x) / 2;
+    const nextFrame = previewGesture.frame + (centerX - previewGesture.centerX) * .18;
+    setSliderValue(zoomSlider, nextZoom);
+    setSliderValue(frameSlider, ((nextFrame % 360) + 360) % 360);
+    return;
+  }
+
+  if (activePreviewPointers.size === 1 && previewGesture.type === "drag") {
+    const point = activePreviewPointers.get(event.pointerId);
+    const nextFrame = previewGesture.frame + (point.x - previewGesture.x) * .32;
+    setSliderValue(frameSlider, ((nextFrame % 360) + 360) % 360);
+  }
+}
+
+function handlePreviewPointerEnd(event) {
+  if (!activePreviewPointers.has(event.pointerId)) return;
+
+  activePreviewPointers.delete(event.pointerId);
+  stageWrap.releasePointerCapture?.(event.pointerId);
+  if (activePreviewPointers.size) startPreviewGesture();
+  else {
+    previewGesture = null;
+    stageWrap.classList.remove("is-touching-preview");
+  }
 }
 
 function setRadioValue(name, value) {
@@ -1040,6 +1126,10 @@ modelImportInput?.addEventListener("change", async event => {
   }
 });
 stageWrap?.addEventListener("wheel", zoomPreviewByWheel, { passive: false });
+stageWrap?.addEventListener("pointerdown", handlePreviewPointerDown);
+stageWrap?.addEventListener("pointermove", handlePreviewPointerMove);
+stageWrap?.addEventListener("pointerup", handlePreviewPointerEnd);
+stageWrap?.addEventListener("pointercancel", handlePreviewPointerEnd);
 document.querySelector("#resetButton").addEventListener("click", resetForm);
 
 window.addEventListener("weirdo:viewer3d-ready", () => {
