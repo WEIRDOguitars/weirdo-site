@@ -75,7 +75,8 @@ camera.position.set(0, 18, 160);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const isTouchDevice = window.matchMedia?.("(pointer: coarse)")?.matches;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isTouchDevice ? 1.35 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.14;
@@ -113,6 +114,8 @@ let baseYaw = 0;
 let fittedHeight = 100;
 let fixedViewHeight = null;
 let zoomFocusPoint = new THREE.Vector3(0, 0, 0);
+let viewFrame = 0;
+let renderFrame = 0;
 
 globalThis.weirdoViewer3d = {
   meshes,
@@ -154,6 +157,7 @@ function captureViewerImage(options = {}) {
   frameSlider.value = String(frame);
   zoomSlider.value = String(zoom);
   updateView();
+  renderNow();
   const image = renderer.domElement.toDataURL(type, quality);
   frameSlider.value = previousFrame;
   zoomSlider.value = previousZoom;
@@ -1571,6 +1575,7 @@ function updateMetalLogoVisibility(yawRadians) {
 }
 
 function updateView() {
+  viewFrame = 0;
   const degrees = Number(frameSlider.value || 0);
   const yaw = baseYaw + THREE.MathUtils.degToRad(degrees);
   pivot.rotation.y = yaw;
@@ -1583,7 +1588,11 @@ function updateView() {
   pivot.position.y = -zoomFocusPoint.y * focusAmount;
   camera.zoom = zoom;
   camera.updateProjectionMatrix();
-  render();
+  requestRender();
+}
+
+function requestViewUpdate() {
+  if (!viewFrame) viewFrame = window.requestAnimationFrame(updateView);
 }
 
 function resize() {
@@ -1600,11 +1609,24 @@ function resize() {
   camera.updateProjectionMatrix();
   renderer.setSize(width, height, false);
   updateViewerDebug("resize");
-  updateView();
+  requestViewUpdate();
 }
 
 function render() {
+  renderFrame = 0;
   renderer.render(scene, camera);
+}
+
+function renderNow() {
+  if (renderFrame) {
+    window.cancelAnimationFrame(renderFrame);
+    renderFrame = 0;
+  }
+  render();
+}
+
+function requestRender() {
+  if (!renderFrame) renderFrame = window.requestAnimationFrame(render);
 }
 
 async function init() {
@@ -1696,8 +1718,8 @@ async function init() {
 
 form.addEventListener("input", applyMaterials);
 form.addEventListener("change", applyMaterials);
-frameSlider.addEventListener("input", updateView);
-zoomSlider.addEventListener("input", updateView);
+frameSlider.addEventListener("input", requestViewUpdate);
+zoomSlider.addEventListener("input", requestViewUpdate);
 
 init().catch(error => {
   container.dataset.viewerStatus = "failed";

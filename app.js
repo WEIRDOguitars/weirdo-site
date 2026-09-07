@@ -12,6 +12,9 @@ let wheelZoomTarget = null;
 let wheelZoomFrame = 0;
 const activePreviewPointers = new Map();
 let previewGesture = null;
+let previewGestureFrame = 0;
+let pendingGestureFrameValue = null;
+let pendingGestureZoomValue = null;
 
 const defaults = {
   topWood: "Klon falisty",
@@ -877,6 +880,26 @@ function setSliderValue(slider, value) {
   slider.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
+function applyPreviewGestureFrame() {
+  previewGestureFrame = 0;
+  if (pendingGestureFrameValue !== null) {
+    setSliderValue(frameSlider, pendingGestureFrameValue);
+    pendingGestureFrameValue = null;
+  }
+  if (pendingGestureZoomValue !== null) {
+    setSliderValue(zoomSlider, pendingGestureZoomValue);
+    pendingGestureZoomValue = null;
+  }
+}
+
+function queuePreviewGestureValues({ frame = null, zoom = null }) {
+  if (frame !== null) pendingGestureFrameValue = frame;
+  if (zoom !== null) pendingGestureZoomValue = zoom;
+  if (!previewGestureFrame) {
+    previewGestureFrame = window.requestAnimationFrame(applyPreviewGestureFrame);
+  }
+}
+
 function zoomPreviewByWheel(event) {
   if (!stageWrap?.contains(event.target)) return;
 
@@ -962,15 +985,17 @@ function handlePreviewPointerMove(event) {
     const points = Array.from(activePreviewPointers.values());
     const centerX = (points[0].x + points[1].x) / 2;
     const nextFrame = previewGesture.frame + (centerX - previewGesture.centerX) * .18;
-    setSliderValue(zoomSlider, nextZoom);
-    setSliderValue(frameSlider, ((nextFrame % 360) + 360) % 360);
+    queuePreviewGestureValues({
+      zoom: nextZoom,
+      frame: ((nextFrame % 360) + 360) % 360
+    });
     return;
   }
 
   if (activePreviewPointers.size === 1 && previewGesture.type === "drag") {
     const point = activePreviewPointers.get(event.pointerId);
     const nextFrame = previewGesture.frame + (point.x - previewGesture.x) * .32;
-    setSliderValue(frameSlider, ((nextFrame % 360) + 360) % 360);
+    queuePreviewGestureValues({ frame: ((nextFrame % 360) + 360) % 360 });
   }
 }
 
@@ -982,6 +1007,9 @@ function handlePreviewPointerEnd(event) {
   if (activePreviewPointers.size) startPreviewGesture();
   else {
     previewGesture = null;
+    if (pendingGestureFrameValue !== null || pendingGestureZoomValue !== null) {
+      applyPreviewGestureFrame();
+    }
     stageWrap.classList.remove("is-touching-preview");
   }
 }

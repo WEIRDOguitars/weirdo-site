@@ -34115,7 +34115,8 @@ void main() {
   camera.position.set(0, 18, 160);
   camera.lookAt(0, 0, 0);
   var renderer = new WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  var isTouchDevice = window.matchMedia?.("(pointer: coarse)")?.matches;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isTouchDevice ? 1.35 : 2));
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.14;
@@ -34146,6 +34147,8 @@ void main() {
   var fittedHeight = 100;
   var fixedViewHeight = null;
   var zoomFocusPoint = new Vector3(0, 0, 0);
+  var viewFrame = 0;
+  var renderFrame = 0;
   globalThis.weirdoViewer3d = {
     meshes,
     roles() {
@@ -34182,6 +34185,7 @@ void main() {
     frameSlider.value = String(frame);
     zoomSlider.value = String(zoom);
     updateView();
+    renderNow();
     const image = renderer.domElement.toDataURL(type, quality);
     frameSlider.value = previousFrame;
     zoomSlider.value = previousZoom;
@@ -35339,6 +35343,7 @@ void main() {
     });
   }
   function updateView() {
+    viewFrame = 0;
     const degrees = Number(frameSlider.value || 0);
     const yaw = baseYaw + MathUtils.degToRad(degrees);
     pivot.rotation.y = yaw;
@@ -35350,7 +35355,10 @@ void main() {
     pivot.position.y = -zoomFocusPoint.y * focusAmount;
     camera.zoom = zoom;
     camera.updateProjectionMatrix();
-    render();
+    requestRender();
+  }
+  function requestViewUpdate() {
+    if (!viewFrame) viewFrame = window.requestAnimationFrame(updateView);
   }
   function resize() {
     const width = Math.max(container.clientWidth, 320);
@@ -35365,10 +35373,21 @@ void main() {
     camera.updateProjectionMatrix();
     renderer.setSize(width, height, false);
     updateViewerDebug("resize");
-    updateView();
+    requestViewUpdate();
   }
   function render() {
+    renderFrame = 0;
     renderer.render(scene, camera);
+  }
+  function renderNow() {
+    if (renderFrame) {
+      window.cancelAnimationFrame(renderFrame);
+      renderFrame = 0;
+    }
+    render();
+  }
+  function requestRender() {
+    if (!renderFrame) renderFrame = window.requestAnimationFrame(render);
   }
   async function init() {
     container.dataset.viewerStatus = "loading-models";
@@ -35454,8 +35473,8 @@ void main() {
   }
   form.addEventListener("input", applyMaterials);
   form.addEventListener("change", applyMaterials);
-  frameSlider.addEventListener("input", updateView);
-  zoomSlider.addEventListener("input", updateView);
+  frameSlider.addEventListener("input", requestViewUpdate);
+  zoomSlider.addEventListener("input", requestViewUpdate);
   init().catch((error2) => {
     container.dataset.viewerStatus = "failed";
     container.dataset.viewerError = error2.message || String(error2);
