@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { ThreeMFLoader } from "three/addons/loaders/3MFLoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 const container = document.querySelector("#guitarViewer3d");
 const form = document.querySelector("#configForm");
@@ -1065,22 +1066,49 @@ function isPearlBinding(selected) {
   return !selected || normalizedLabel(selected.value) === "perlowy";
 }
 
+let bindingEnvironment = null;
+
+function pearlEnvironment() {
+  if (!bindingEnvironment) {
+    const room = new RoomEnvironment();
+    const generator = new THREE.PMREMGenerator(renderer);
+    bindingEnvironment = generator.fromScene(room, .06);
+    room.dispose();
+    generator.dispose();
+  }
+  return bindingEnvironment.texture;
+}
+
 function bindingMaterial() {
   const selected = form.querySelector('[name="binding"]:checked');
   const isPearl = isPearlBinding(selected);
   const color = isPearl ? "#CEC0A4" : selected?.dataset.color || "#CEC0A4";
-  return physicalMaterial({
+  const material = physicalMaterial({
     color,
-    metalness: 0,
-    roughness: isPearl ? .34 : .34,
-    clearcoat: isPearl ? .62 : .52,
-    clearcoatRoughness: isPearl ? .24 : .18,
-    iridescence: isPearl ? .06 : .08,
+    metalness: isPearl ? .28 : .48,
+    roughness: .26,
+    clearcoat: 1,
+    clearcoatRoughness: .12,
+    iridescence: .08,
     iridescenceIOR: 1.18,
-    sheen: isPearl ? .28 : 0,
-    emissive: isPearl ? "#211b13" : "#050403",
-    emissiveIntensity: isPearl ? .08 : .05
+    sheen: .2
   });
+  material.envMap = pearlEnvironment();
+  material.envMapIntensity = .85;
+  // Object-space grain stays attached to the resin even on meshes without UVs.
+  material.onBeforeCompile = shader => {
+    shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vPearlPosition;");
+    shader.vertexShader = shader.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvPearlPosition = position;");
+    shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vPearlPosition;");
+    shader.fragmentShader = shader.fragmentShader.replace("#include <roughnessmap_fragment>", `
+      #include <roughnessmap_fragment>
+      float pearlGrain = sin(vPearlPosition.x * 35.0) * sin(vPearlPosition.y * 39.0) * sin(vPearlPosition.z * 33.0);
+      float grainVisibility = 1.0 - smoothstep(0.025, 0.12, length(fwidth(vPearlPosition)));
+      roughnessFactor = clamp(roughnessFactor + pearlGrain * grainVisibility * 0.07, 0.16, 0.4);
+    `);
+  };
+  material.customProgramCacheKey = () => "pearl-resin-v1";
+  return material;
 }
 
 function bodyBindingRimMaterial() {
@@ -1194,6 +1222,14 @@ function applyMaterials() {
     }
     mesh.visible = true;
     mesh.material = materialForRole(mesh.userData.role);
+    // The tilted headstock catches a broad white coat reflection at the front view.
+    if (mesh.userData.role === "binding" && mesh.parent?.name === "Visual_v7" && mesh.name === "Body12") {
+      mesh.material.clearcoat = .25;
+      mesh.material.roughness = .34;
+      mesh.material.specularIntensity = .25;
+      mesh.material.envMapIntensity = .35;
+      mesh.material.sheen = .08;
+    }
     mesh.material.transparent = false;
     mesh.material.opacity = 1;
     mesh.material.alphaMap = null;

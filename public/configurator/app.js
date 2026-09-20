@@ -84,10 +84,10 @@ const solidPaintColors = [
 const bindingOptions = [
   ["Perłowy", "#CEC0A4", true],
   ["Silver dust", "#8f9497"],
-  ["Czerwony", "#8f403d"],
-  ["Zielony", "#4f775e"],
-  ["Fioletowy", "#685979"],
-  ["Żółty", "#ad9554"],
+  ["Czerwony", "#a32c36"],
+  ["Zielony", "#36794e"],
+  ["Fioletowy", "#70418f"],
+  ["Żółty", "#b59a35"],
   ["Ciemny szary", "#4d4d4d"]
 ];
 
@@ -151,7 +151,7 @@ function renderPalettes() {
   document.querySelector("#bindingChoices").innerHTML = bindingOptions.map(([name, color, recommended]) => `
     <label class="swatch-label" title="${recommended ? "Rekomendowane" : name}">
       <input type="radio" name="binding" value="${name}" data-color="${color}" ${name === selectedBinding ? "checked" : ""}>
-      <span class="color-dot" style="background:${color}"></span>
+      <span class="color-dot" style="background:linear-gradient(135deg, transparent 18%, #ffffff85 37%, transparent 53%, #00000038 78%),${color}"></span>
       <span>${name}</span>
     </label>
   `).join("");
