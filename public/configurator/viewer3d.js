@@ -1264,7 +1264,9 @@ function applyMaterials() {
     }
     if (mesh.userData.role === "metalLogo") {
       mesh.renderOrder = 8;
-      mesh.material.polygonOffset = false;
+      mesh.material.polygonOffset = true;
+      mesh.material.polygonOffsetFactor = -60;
+      mesh.material.polygonOffsetUnits = -60;
       mesh.material.depthTest = true;
       mesh.material.depthWrite = false;
     }
@@ -1593,12 +1595,13 @@ function alignMetalLogoGeometryLayer(object) {
     bodySize.y * .28 / Math.max(logoSize.y, .0001)
   ) * .5;
   object.scale.setScalar(scale);
+  object.userData.logoBaseScale = scale;
   object.updateWorldMatrix(true, true);
 
   const targetWorld = new THREE.Vector3(
     bodyBox.min.x + bodySize.x * .375,
     bodyBox.max.y - bodySize.y * .13,
-    topBox.max.z + 6.8
+    topBox.max.z + .2 + logoSize.z * scale * .5
   );
   object.position.copy(model.worldToLocal(targetWorld.clone()));
   object.updateWorldMatrix(true, true);
@@ -1606,7 +1609,7 @@ function alignMetalLogoGeometryLayer(object) {
 
 function updateMetalLogoVisibility(yawRadians) {
   const frontAmount = Math.cos(yawRadians - baseYaw);
-  const visible = frontAmount > .55;
+  const visible = frontAmount > .04;
   meshes.forEach(mesh => {
     if (mesh.userData.role === "metalLogo") mesh.visible = visible;
   });
@@ -1620,6 +1623,12 @@ function updateView() {
   updateMetalLogoVisibility(yaw);
 
   const zoomValue = Number(zoomSlider.value || 0);
+  const logo = model?.getObjectByName("MetalLogo3MF");
+  if (logo?.userData.logoBaseScale) {
+    const readabilityScale = 1 + .2 * (1 - THREE.MathUtils.smoothstep(zoomValue, 0, 50));
+    const baseScale = logo.userData.logoBaseScale;
+    logo.scale.set(baseScale * readabilityScale, baseScale * readabilityScale, baseScale);
+  }
   const zoom = 1.24 + zoomValue / 62;
   const focusAmount = THREE.MathUtils.smoothstep(zoomValue / 100, 0, 1);
   pivot.position.x = -zoomFocusPoint.x * focusAmount;
