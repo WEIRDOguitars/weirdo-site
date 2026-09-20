@@ -61,7 +61,7 @@ const finishColors = [
 
 const burstColors = [
   ["Bez barwnika", "natural", "natural"],
-  ["Evil green", "burst:evil-green", "linear-gradient(135deg, #06150b 0%, #14502d 35%, #79b957 100%)"],
+  ["Evil green", "burst:evil-green", "linear-gradient(135deg, #435139 0%, #849b49 35%, #b4c65b 100%)"],
   ["Devil red", "burst:devil-red", "linear-gradient(135deg, #170203 0%, #9b1512 42%, #e07821 100%)"],
   ["Purple rain", "burst:purple-rain", "linear-gradient(135deg, #12051d 0%, #61307f 48%, #1b66b0 100%)"],
   ["Sunshine", "burst:sunshine", "linear-gradient(135deg, #6f2d08 0%, #db7e21 48%, #f0c83a 100%)"],
@@ -344,7 +344,8 @@ function drawCoverTexture(targetCtx, texture, wood, color = "", area = "") {
   const shiftedTopTexture = area === "top" && (wood === "Klon falisty" || wood === "Topola czeczot");
   const topTextureOffset = shiftedTopTexture ? -.1 : 0;
   targetCtx.save();
-  targetCtx.filter = color === "natural"
+  targetCtx.filter = color === "burst:evil-green" && (wood === "Klon falisty" || wood === "Topola czeczot") ? "contrast(1.22) brightness(.94)"
+    : color === "natural"
     ? wood === "Klon falisty" ? "none" : wood === "Topola czeczot" ? "contrast(1.12) brightness(.98) saturate(1.04)" : "contrast(1.08) brightness(.92) saturate(1.04)"
     : wood === "Klon falisty" ? "contrast(1.08) brightness(.92) saturate(1.03)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
 
@@ -369,7 +370,7 @@ function drawCoverTexture(targetCtx, texture, wood, color = "", area = "") {
 
 function burstDefinition(color) {
   return {
-    "burst:evil-green": { edge: "#06150b", mid: "#14502d", center: "#84bf58" },
+    "burst:evil-green": { edge: "#435139", mid: "#849b49", center: "#b4c65b" },
     "burst:devil-red": { edge: "#150202", mid: "#9b1512", center: "#e07922" },
     "burst:purple-rain": { edge: "#12051d", mid: "#63307f", center: "#1b66b0" },
     "burst:sunshine": { edge: "#71310a", mid: "#db7e21", center: "#f0c83a" },
@@ -384,12 +385,13 @@ function burstCenter(width, height) {
 function applyBurstColor(context, width, height, color, wood = "") {
   const burst = burstDefinition(color);
   if (!burst) return false;
+  const photoGreen = color === "burst:evil-green";
   const center = burstCenter(width, height);
   const mapleBurst = wood === "Klon falisty";
 
   context.save();
   context.globalCompositeOperation = "multiply";
-  context.globalAlpha = mapleBurst ? .5 : .42;
+  context.globalAlpha = photoGreen ? .24 : mapleBurst ? .5 : .42;
   context.fillStyle = "#050505";
   context.fillRect(0, 0, width, height);
 
@@ -402,9 +404,9 @@ function applyBurstColor(context, width, height, color, wood = "") {
   context.fillStyle = radial;
   context.fillRect(0, 0, width, height);
 
-  if (mapleBurst) {
-    context.globalCompositeOperation = "source-over";
-    context.globalAlpha = .12;
+  if (mapleBurst || photoGreen) {
+    context.globalCompositeOperation = photoGreen ? "multiply" : "source-over";
+    context.globalAlpha = photoGreen ? .44 : .12;
     context.fillStyle = radial;
     context.fillRect(0, 0, width, height);
   }
@@ -414,7 +416,7 @@ function applyBurstColor(context, width, height, color, wood = "") {
   edgeShade.addColorStop(.58, `rgba(0,0,0,${mapleBurst ? .2 : .16})`);
   edgeShade.addColorStop(1, `rgba(0,0,0,${mapleBurst ? .9 : .82})`);
   context.globalCompositeOperation = "multiply";
-  context.globalAlpha = mapleBurst ? .9 : .82;
+  context.globalAlpha = photoGreen ? .32 : mapleBurst ? .9 : .82;
   context.fillStyle = edgeShade;
   context.fillRect(0, 0, width, height);
 

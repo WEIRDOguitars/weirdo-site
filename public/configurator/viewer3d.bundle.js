@@ -34291,7 +34291,7 @@ void main() {
     } else {
       context.clearRect(0, 0, width, height);
     }
-    context.filter = color === "natural" ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
+    context.filter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)" : color === "natural" ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
     context.drawImage(image, 0, textureOffsetY, width, height);
     if (textureOffsetY < 0) context.drawImage(image, 0, height + textureOffsetY, width, height);
     context.filter = "none";
@@ -34339,7 +34339,7 @@ void main() {
   }
   function burstDefinition(color) {
     return {
-      "burst:evil-green": { edge: "#06150b", mid: "#14502d", center: "#84bf58" },
+      "burst:evil-green": { edge: "#435139", mid: "#849b49", center: "#b4c65b" },
       "burst:devil-red": { edge: "#150202", mid: "#9b1512", center: "#e07922" },
       "burst:purple-rain": { edge: "#12051d", mid: "#63307f", center: "#1b66b0" },
       "burst:sunshine": { edge: "#71310a", mid: "#db7e21", center: "#f0c83a" },
@@ -34352,10 +34352,11 @@ void main() {
   function paintBurstTint(context, width, height, color, mapleBurst = false) {
     const burst = burstDefinition(color);
     if (!burst) return false;
+    const photoGreen = color === "burst:evil-green";
     const center = burstCenter(width, height);
     context.save();
     context.globalCompositeOperation = "multiply";
-    context.globalAlpha = mapleBurst ? 0.5 : 0.42;
+    context.globalAlpha = photoGreen ? 0.24 : mapleBurst ? 0.5 : 0.42;
     context.fillStyle = "#050505";
     context.fillRect(0, 0, width, height);
     const radial = context.createRadialGradient(center.x, center.y, width * 0.08, center.x, center.y, width * 0.62);
@@ -34366,9 +34367,9 @@ void main() {
     context.globalAlpha = 1;
     context.fillStyle = radial;
     context.fillRect(0, 0, width, height);
-    if (mapleBurst) {
-      context.globalCompositeOperation = "source-over";
-      context.globalAlpha = 0.12;
+    if (mapleBurst || photoGreen) {
+      context.globalCompositeOperation = photoGreen ? "multiply" : "source-over";
+      context.globalAlpha = photoGreen ? 0.44 : 0.12;
       context.fillStyle = radial;
       context.fillRect(0, 0, width, height);
     }
@@ -34377,7 +34378,7 @@ void main() {
     edgeShade.addColorStop(0.58, `rgba(0,0,0,${mapleBurst ? 0.2 : 0.16})`);
     edgeShade.addColorStop(1, `rgba(0,0,0,${mapleBurst ? 0.9 : 0.82})`);
     context.globalCompositeOperation = "multiply";
-    context.globalAlpha = mapleBurst ? 0.9 : 0.82;
+    context.globalAlpha = photoGreen ? 0.32 : mapleBurst ? 0.9 : 0.82;
     context.fillStyle = edgeShade;
     context.fillRect(0, 0, width, height);
     const centerLift = context.createRadialGradient(center.x, height * 0.46, 0, center.x, height * 0.46, width * 0.42);
