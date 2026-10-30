@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { ThreeMFLoader } from "three/addons/loaders/3MFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 const container = document.querySelector("#guitarViewer3d");
 const form = document.querySelector("#configForm");
@@ -11,8 +12,13 @@ container.dataset.viewerStatus = "module-started";
 
 const assetBase = window.location.protocol === "file:" ? "." : window.location.pathname.includes("/configurator") ? "." : ".";
 const modelPath = `${assetBase}/models/Calosc.fbx`;
+const tunerModelPaths = {
+  left: `${assetBase}/models/tuners/WEIRDO_SG381_LEFT_motylek_osobny.glb`,
+  right: `${assetBase}/models/tuners/WEIRDO_SG381_RIGHT_motylek_osobny.glb`
+};
 const layerModelPaths = {
-  top: `${assetBase}/elementy/model 3d/top.3mf`,
+  body: `${assetBase}/models/body/korpus-fazy.3mf`,
+  top: `${assetBase}/models/body/top-faza.3mf`,
   sides: `${assetBase}/elementy/model 3d/boki-only.3mf`,
   binding: `${assetBase}/elementy/model 3d/bindig korpus.3mf`,
   metalLogo: `${assetBase}/elementy/model 3d/logo metal.3mf`
@@ -109,6 +115,21 @@ const textureLoader = new THREE.TextureLoader();
 const textures = {};
 const texturePromises = [];
 const tintedTextureCache = new Map();
+function cacheTintedTexture(key, texture) {
+  tintedTextureCache.set(key, texture);
+  if (tintedTextureCache.size > 16) {
+    const oldest = tintedTextureCache.keys().next().value;
+    tintedTextureCache.get(oldest).dispose();
+    tintedTextureCache.delete(oldest);
+  }
+}
+
+function textureCanvasSize(image) {
+  const width = image?.naturalWidth || image?.width || 1024;
+  const height = image?.naturalHeight || image?.height || 1024;
+  const scale = Math.min(1, 1024 / Math.max(width, height));
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+}
 const meshes = [];
 let model = null;
 let baseYaw = 0;
@@ -282,8 +303,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   if (tintedTextureCache.has(cacheKey)) return tintedTextureCache.get(cacheKey).clone();
 
   const canvas = document.createElement("canvas");
-  const width = image.naturalWidth || image.width || 1024;
-  const height = image.naturalHeight || image.height || 1024;
+  const { width, height } = textureCanvasSize(image);
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext("2d");
@@ -307,6 +327,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
     context.clearRect(0, 0, width, height);
   }
   context.filter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)"
+    : color === "burst:purple-rain" && vivid ? (isMaple ? "contrast(1.4) brightness(.9)" : "contrast(2.55) brightness(.62) saturate(1.45)")
     : color === "natural"
     ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)"
     : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
@@ -358,7 +379,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   texture.rotation = rotation;
   texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
   texture.needsUpdate = true;
-  tintedTextureCache.set(cacheKey, texture);
+  cacheTintedTexture(cacheKey, texture);
   return texture.clone();
 }
 
@@ -366,7 +387,7 @@ function burstDefinition(color) {
   return {
     "burst:evil-green": { edge: "#435139", mid: "#849b49", center: "#b4c65b" },
     "burst:devil-red": { edge: "#150202", mid: "#9b1512", center: "#e07922" },
-    "burst:purple-rain": { edge: "#12051d", mid: "#63307f", center: "#1b66b0" },
+    "burst:purple-rain": { edge: "#25232d", mid: "#514154", center: "#986581" },
     "burst:sunshine": { edge: "#71310a", mid: "#db7e21", center: "#f0c83a" },
     "burst:foggy": { edge: "#070707", mid: "#54595e", center: "#beb7a8" }
   }[color] || null;
@@ -421,6 +442,12 @@ function paintBurstTint(context, width, height, color, mapleBurst = false) {
   context.globalAlpha = mapleBurst ? .22 : .3;
   context.fillStyle = centerLift;
   context.fillRect(0, 0, width, height);
+  if (color === "burst:purple-rain") {
+    context.globalCompositeOperation = "multiply";
+    context.globalAlpha = .28;
+    context.fillStyle = "#554959";
+    context.fillRect(0, 0, width, height);
+  }
 
   context.restore();
   context.globalCompositeOperation = "source-over";
@@ -431,6 +458,7 @@ function paintBurstTint(context, width, height, color, mapleBurst = false) {
 function paintGlossIntoTexture(context, width, height, area) {
   const side = area === "sides";
   context.save();
+  context.globalAlpha = .85;
   context.globalCompositeOperation = "screen";
 
   const broad = context.createLinearGradient(0, height * .16, width, height * .78);
@@ -467,6 +495,7 @@ function paintGlossIntoTexture(context, width, height, area) {
 function paintSolidGlossIntoTexture(context, width, height, area, color) {
   const side = area === "sides";
   context.save();
+  context.globalAlpha = .85;
   context.globalCompositeOperation = "screen";
 
   const reflection = context.createLinearGradient(width * .18, 0, width * .72, height);
@@ -696,6 +725,8 @@ function addRoleSurfaceSkin(role, name, gap = .035) {
     skin.rotation.copy(source.rotation);
     skin.quaternion.copy(source.quaternion);
     skin.scale.copy(source.scale);
+    // Only the cosmetic skin is flattened; the source retains its side and cavity walls.
+    keepOuterSurfaceFaces(skin, .9, .025);
     source.parent.add(skin);
     moveObjectInWorld(skin, new THREE.Vector3(0, 0, gap));
     meshes.push(skin);
@@ -848,7 +879,7 @@ function glossCoatMaterial(role) {
 
   return new THREE.ShaderMaterial({
     uniforms: {
-      coatOpacity: { value: enabled ? opacity : 0 },
+      coatOpacity: { value: enabled ? opacity * .85 : 0 },
       bandStrength: { value: strength },
       sweepOffset: { value: role === "top" ? -4.0 : 1.5 }
     },
@@ -930,8 +961,7 @@ function paintTextureForColor(color, finish = "Mat", area = "top") {
   const source = sourceKey ? textures[sourceKey] : null;
   const image = source?.image;
   const canvas = document.createElement("canvas");
-  const width = image?.naturalWidth || image?.width || 1024;
-  const height = image?.naturalHeight || image?.height || 1024;
+  const { width, height } = textureCanvasSize(image);
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext("2d");
@@ -956,7 +986,7 @@ function paintTextureForColor(color, finish = "Mat", area = "top") {
   texture.offset.set(0, 0);
   texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
   texture.needsUpdate = true;
-  tintedTextureCache.set(cacheKey, texture);
+  cacheTintedTexture(cacheKey, texture);
   return texture.clone();
 }
 
@@ -1085,8 +1115,8 @@ function bindingMaterial() {
   const color = isPearl ? "#CEC0A4" : selected?.dataset.color || "#CEC0A4";
   const material = physicalMaterial({
     color,
-    metalness: isPearl ? .28 : .48,
-    roughness: .26,
+    metalness: isPearl ? .28 : .78,
+    roughness: isPearl ? .26 : .23,
     clearcoat: 1,
     clearcoatRoughness: .12,
     iridescence: .08,
@@ -1094,7 +1124,7 @@ function bindingMaterial() {
     sheen: .2
   });
   material.envMap = pearlEnvironment();
-  material.envMapIntensity = .85;
+  material.envMapIntensity = isPearl ? .85 : 1.3;
   // Object-space grain stays attached to the resin even on meshes without UVs.
   material.onBeforeCompile = shader => {
     shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vPearlPosition;");
@@ -1107,7 +1137,39 @@ function bindingMaterial() {
       roughnessFactor = clamp(roughnessFactor + pearlGrain * grainVisibility * 0.07, 0.16, 0.4);
     `);
   };
-  material.customProgramCacheKey = () => "pearl-resin-v1";
+  if (!isPearl) {
+    material.onBeforeCompile = shader => {
+      shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vPigmentPosition;");
+      // Scale to assembly millimeters so FBX, 3MF and GLB parts share the same grain size.
+      shader.vertexShader = shader.vertexShader.replace("#include <begin_vertex>", `
+        #include <begin_vertex>
+        vPigmentPosition = position * vec3(length(modelMatrix[0].xyz), length(modelMatrix[1].xyz), length(modelMatrix[2].xyz));
+      `);
+      shader.fragmentShader = shader.fragmentShader.replace("#include <common>", `
+        #include <common>
+        varying vec3 vPigmentPosition;
+        float pigmentHash(vec3 p) {
+          p = fract(p * 0.1031);
+          p += dot(p, p.yzx + 33.33);
+          return fract((p.x + p.y) * p.z);
+        }
+      `);
+      shader.fragmentShader = shader.fragmentShader.replace("#include <color_fragment>", `
+        #include <color_fragment>
+        vec3 grainPosition = vPigmentPosition * 4.0;
+        float grainDetail = 1.0 - smoothstep(0.5, 1.5, length(fwidth(grainPosition)));
+        float flake = smoothstep(0.78, 0.98, pigmentHash(floor(grainPosition))) * grainDetail;
+        float flow = sin(vPigmentPosition.x * 0.6 + sin(vPigmentPosition.y * 0.35) * 2.0 + vPigmentPosition.z * 0.4);
+        diffuseColor.rgb *= 0.86 + 0.14 * flow;
+        diffuseColor.rgb = mix(diffuseColor.rgb, mix(diffuseColor.rgb, vec3(1.0, 0.94, 0.82), 0.3), flake * 0.55);
+      `);
+      shader.fragmentShader = shader.fragmentShader.replace("#include <roughnessmap_fragment>", `
+        #include <roughnessmap_fragment>
+        roughnessFactor = clamp(roughnessFactor + flow * 0.035 - flake * 0.10, 0.12, 0.34);
+      `);
+    };
+  }
+  material.customProgramCacheKey = () => isPearl ? "pearl-resin-v1" : "pigmented-pearl-metallic-v2";
   return material;
 }
 
@@ -1183,6 +1245,7 @@ function materialForRole(role) {
   }
   if (role === "fretboard") return physicalMaterial({ color: solidColors[fieldValue("fretboard")] || solidColors.Heban, roughness: .7 });
   if (role === "binding") return bindingMaterial();
+  if (role === "tunerButtons") return bindingMaterial();
   if (role === "bodyBindingRim") return bodyBindingRimMaterial();
   if (role === "bodyBindingGlow") return bodyBindingGlowMaterial();
   if (role === "markers") return markerMaterial();
@@ -1200,6 +1263,7 @@ function materialForRole(role) {
 }
 
 function applyMaterials() {
+  const previousMaterials = new Set(meshes.filter(mesh => !mesh.userData.preserveMaterial).flatMap(mesh => Array.isArray(mesh.material) ? mesh.material : [mesh.material]));
   const activeVariant = activeElectronicsVariant();
   meshes.forEach(mesh => {
     if (mesh.userData.preserveMaterial) {
@@ -1222,13 +1286,36 @@ function applyMaterials() {
     }
     mesh.visible = true;
     mesh.material = materialForRole(mesh.userData.role);
-    // The tilted headstock catches a broad white coat reflection at the front view.
-    if (mesh.userData.role === "binding" && mesh.parent?.name === "Visual_v7" && mesh.name === "Body12") {
-      mesh.material.clearcoat = .25;
+    // Preserve pigment on the head rim and buttons where white reflections wash out color.
+    const pearl = isPearlBinding(form.querySelector('[name="binding"]:checked'));
+    const headBinding = mesh.userData.role === "binding" && mesh.parent?.name === "Visual_v7" && mesh.name === "Body12";
+    if (headBinding || (mesh.userData.role === "tunerButtons" && !pearl)) {
+      mesh.material.clearcoat = pearl ? .25 : 0;
+      mesh.material.clearcoatRoughness = pearl ? .12 : .32;
       mesh.material.roughness = .34;
-      mesh.material.specularIntensity = .25;
-      mesh.material.envMapIntensity = .35;
-      mesh.material.sheen = .08;
+      mesh.material.specularIntensity = pearl ? .25 : 0;
+      mesh.material.envMapIntensity = pearl ? .35 : .75;
+      mesh.material.sheen = pearl ? .08 : 0;
+      if (!pearl) {
+        mesh.material.metalness = .95;
+        mesh.material.iridescence = 0;
+        mesh.material.toneMapped = false;
+        const pigmentShader = mesh.material.onBeforeCompile;
+        const pigmentColor = mesh.material.color.clone();
+        mesh.material.onBeforeCompile = shader => {
+          pigmentShader(shader);
+          shader.uniforms.headPigmentColor = { value: pigmentColor };
+          shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nuniform vec3 headPigmentColor;");
+          // Retain the resin pigment instead of clipping strong highlights to white.
+          shader.fragmentShader = shader.fragmentShader.replace("#include <opaque_fragment>", `
+            float rimBrightness = max(max(outgoingLight.r, outgoingLight.g), outgoingLight.b);
+            vec3 pigmentHue = headPigmentColor / max(max(max(headPigmentColor.r, headPigmentColor.g), headPigmentColor.b), 0.001);
+            outgoingLight = mix(outgoingLight / max(1.0, rimBrightness), pigmentHue * clamp(rimBrightness, 0.18, 0.85), 0.8);
+            #include <opaque_fragment>
+          `);
+        };
+        mesh.material.customProgramCacheKey = () => "head-pigment-highlight-v4";
+      }
     }
     mesh.material.transparent = false;
     mesh.material.opacity = 1;
@@ -1252,14 +1339,15 @@ function applyMaterials() {
       mesh.renderOrder = 3;
       if (mesh.userData.surfaceSkin) mesh.renderOrder = 3.75;
       mesh.material.depthTest = true;
-      mesh.material.polygonOffset = true;
-      mesh.material.polygonOffsetFactor = mesh.userData.surfaceSkin ? -40 : -10;
-      mesh.material.polygonOffsetUnits = mesh.userData.surfaceSkin ? -40 : -10;
+      // Slope-based bias pulls edge-on walls through the body when viewed from behind.
+      mesh.material.polygonOffset = Boolean(mesh.userData.surfaceSkin);
+      mesh.material.polygonOffsetFactor = 0;
+      mesh.material.polygonOffsetUnits = mesh.userData.surfaceSkin ? -2 : 0;
     }
     if (mesh.userData.role === "binding") {
       mesh.renderOrder = 4;
     }
-    if (["hardware", "pickupFrame", "pickupCenter", "pickupMagnets", "tuners", "knobs", "nut", "frets", "markers"].includes(mesh.userData.role)) {
+    if (["hardware", "pickupFrame", "pickupCenter", "pickupMagnets", "tuners", "tunerButtons", "knobs", "nut", "frets", "markers"].includes(mesh.userData.role)) {
       mesh.renderOrder = 5;
     }
     if (mesh.userData.role === "metalLogo") {
@@ -1273,6 +1361,13 @@ function applyMaterials() {
     mesh.material.needsUpdate = true;
   });
   updateMetalLogoVisibility(pivot.rotation.y);
+  const retainedMaterials = new Set(meshes.flatMap(mesh => Array.isArray(mesh.material) ? mesh.material : [mesh.material]));
+  const retainedMaps = new Set([...retainedMaterials].map(material => material?.map));
+  previousMaterials.forEach(material => {
+    if (!material || retainedMaterials.has(material)) return;
+    if (material.map && !retainedMaps.has(material.map)) material.map.dispose();
+    material.dispose();
+  });
   updateViewerDebug("materials");
   render();
 }
@@ -1281,7 +1376,7 @@ function fitCamera() {
   if (!model) return;
 
   const box = new THREE.Box3();
-  const fitRoles = new Set(["top", "sides", "head", "fretboard", "body", "hardware", "pickupFrame", "pickupCenter", "pickupMagnets", "tuners", "knobs", "nut", "frets", "markers"]);
+  const fitRoles = new Set(["top", "sides", "head", "fretboard", "body", "hardware", "pickupFrame", "pickupCenter", "pickupMagnets", "tuners", "tunerButtons", "knobs", "nut", "frets", "markers"]);
   let found = false;
   meshes.forEach(mesh => {
     if (!mesh.visible || !fitRoles.has(mesh.userData.role)) return;
@@ -1363,13 +1458,14 @@ function removeSteepSideFaces(object, threshold = .58) {
   });
 }
 
-function keepOuterSurfaceFaces(object, threshold = .82, depthPadding = .55) {
-  const dominantAxis = dominantSurfaceAxis(object);
+function keepOuterSurfaceFaces(object, threshold = .82, depthPadding = .55, keepWalls = false) {
+  const dominantAxis = object.userData.outerSurfaceAxis ?? dominantSurfaceAxis(object);
   if (dominantAxis === -1) return;
 
   object.traverse(child => {
     if (!child.isMesh || child.userData.skipLayer || !child.geometry?.attributes?.position) return;
-    keepFacesOnAxis(child, dominantAxis, threshold, { outerOnly: true, depthPadding });
+    child.userData.outerSurfaceAxis = dominantAxis;
+    keepFacesOnAxis(child, dominantAxis, threshold, { outerOnly: true, depthPadding, keepWalls });
   });
 }
 
@@ -1432,8 +1528,10 @@ function keepFacesOnAxis(mesh, dominantAxis, threshold, options = {}) {
     faceNormal.subVectors(c, b).cross(a.clone().sub(b)).normalize();
 
     const alignment = dominantAxis === 0 ? faceNormal.x : dominantAxis === 1 ? faceNormal.y : faceNormal.z;
-    if (Math.abs(alignment) < threshold) continue;
-    if (options.outerOnly) {
+    // Shallow chamfers also belong to the shell, not to hidden horizontal faces.
+    const isWall = Math.abs(alignment) < (options.keepWalls ? .9999 : threshold);
+    if (isWall && !options.keepWalls) continue;
+    if (options.outerOnly && !isWall) {
       const centerOnAxis = (axisValue(a) + axisValue(b) + axisValue(c)) / 3;
       if (centerOnAxis < frontLimit) continue;
     }
@@ -1676,19 +1774,118 @@ function requestRender() {
   if (!renderFrame) renderFrame = window.requestAnimationFrame(render);
 }
 
+function replaceBody(mainModel, bodyLayer) {
+  const oldBodies = [];
+  mainModel.traverse(mesh => {
+    if (mesh.isMesh && mesh.name === "Korpus" && mesh.parent?.name === "Korpus") oldBodies.push(mesh);
+  });
+  const bodyMeshes = [];
+  const plateMeshes = [];
+  const discarded = [];
+  bodyLayer.traverse(mesh => {
+    if (!mesh.isMesh) return;
+    if (mesh.name === "Korpus") {
+      mesh.userData.forceRole = "body";
+      bodyMeshes.push(mesh);
+    } else if (normalizedLabel(mesh.name) === normalizedLabel("Bry\u0142a1")) {
+      mesh.userData.forceRole = "hardware";
+      plateMeshes.push(mesh);
+    } else {
+      discarded.push(mesh);
+    }
+  });
+  if (oldBodies.length !== 1 || bodyMeshes.length !== 1 || plateMeshes.length !== 1) {
+    throw new Error("Expected one original body, one chamfered body and one jack plate.");
+  }
+  // The 3MF already contains the STEP plate in assembly coordinates. Do not recenter it.
+  [...oldBodies, ...discarded].forEach(mesh => {
+    mesh.removeFromParent();
+    mesh.geometry.dispose();
+  });
+  bodyLayer.name = "ChamferedBodyAndJackPlate";
+}
+
+function seatNeckAssembly(mainModel) {
+  mainModel.updateWorldMatrix(true, true);
+  const neck = mainModel.getObjectByName("GRYF");
+  if (!neck?.isMesh || neck.parent?.name !== "Visual_v7") throw new Error("Missing neck assembly.");
+
+  // Surveyed FBX mating surfaces (mm): heel start z=15, pocket floor z=16.9023.
+  // The heel rises toward the head by 1.5 degrees; rotate the assembly back to seat it.
+  const neckBox = new THREE.Box3().setFromObject(neck);
+  const joint = new THREE.Vector3(4080.77, neckBox.min.y, 15);
+  const rotation = new THREE.Matrix4().makeRotationX(THREE.MathUtils.degToRad(-1.5));
+  const transform = new THREE.Matrix4().makeTranslation(joint.x, joint.y, 16.902302634249562)
+    .multiply(rotation)
+    .multiply(new THREE.Matrix4().makeTranslation(-joint.x, -joint.y, -joint.z));
+  const parts = new Set([neck.parent]);
+  mainModel.traverse(object => {
+    if (["Klucz_lewy_v1", "Component1"].includes(object.name)) parts.add(object);
+    if (object.isMesh && object.name === "siodelko") parts.add(object.parent);
+  });
+  // Keep original parents/names intact: material classification relies on them.
+  parts.forEach(part => {
+    const local = part.parent.matrixWorld.clone().invert()
+      .multiply(transform).multiply(part.matrixWorld);
+    local.decompose(part.position, part.quaternion, part.scale);
+  });
+  mainModel.updateWorldMatrix(true, true);
+}
+
+function replaceTuners(mainModel, leftModel, rightModel) {
+  const originals = [];
+  mainModel.traverse(mesh => {
+    if (mesh.isMesh && ["Klucz_lewy_v1", "Component1"].includes(mesh.parent?.name)) originals.push(mesh);
+  });
+  if (originals.length !== 6) throw new Error("Expected six tuner mounts in the guitar model.");
+  originals.forEach(original => {
+    const left = original.parent.name === "Klucz_lewy_v1";
+    const replacement = (left ? leftModel : rightModel).clone(true);
+    const metal = replacement.getObjectByName(left ? "SG381_LEFT_METAL" : "SG381_RIGHT_METAL");
+    const button = replacement.getObjectByName("WEIRDO_MOTYLEK_BINDING_COLOR");
+    if (!metal?.isMesh || !button?.isMesh) throw new Error("Missing separate tuner metal or button geometry.");
+    // The supplied right GLB keeps the left button axis (-3.6 mm); its shaft is at +3.6 mm.
+    if (!left) button.position.y += 7.2;
+    original.geometry.computeBoundingBox();
+    metal.geometry.computeBoundingBox();
+    const oldDepth = original.geometry.boundingBox.max.z - original.geometry.boundingBox.min.z;
+    const newDepth = metal.geometry.boundingBox.max.z - metal.geometry.boundingBox.min.z;
+    // FBX geometry is in cm; GLB geometry is in mm. Preserve the original mount transform.
+    replacement.position.copy(original.position);
+    replacement.quaternion.copy(original.quaternion);
+    replacement.scale.copy(original.scale).multiplyScalar(oldDepth / newDepth);
+    replacement.traverse(mesh => {
+      if (!mesh.isMesh) return;
+      mesh.userData.forceRole = mesh === button ? "tunerButtons" : "tuners";
+      if (!mesh.geometry.attributes.normal) mesh.geometry.computeVertexNormals();
+    });
+    const parent = original.parent;
+    parent.remove(original);
+    parent.add(replacement);
+    original.geometry.dispose();
+  });
+}
+
 async function init() {
   container.dataset.viewerStatus = "loading-models";
   const loader = new FBXLoader();
   const layerLoader = new ThreeMFLoader();
+  const tunerLoader = new GLTFLoader();
   const variantLayerPromises = Object.entries(electronicsGeometryVariants).flatMap(([variant, paths]) =>
     Object.entries(paths).map(([role, path]) => layerLoader.loadAsync(encodeURI(path)).then(layer => ({ variant, role, layer })))
   );
-  const [mainModel, variantLayers, bodyBindingModel, metalLogoModel] = await Promise.all([
+  const [mainModel, variantLayers, bodyBindingModel, metalLogoModel, leftTuner, rightTuner, bodyLayer] = await Promise.all([
     loader.loadAsync(encodeURI(modelPath)),
     Promise.all(variantLayerPromises),
     layerLoader.loadAsync(encodeURI(layerModelPaths.binding)),
-    layerLoader.loadAsync(encodeURI(layerModelPaths.metalLogo))
+    layerLoader.loadAsync(encodeURI(layerModelPaths.metalLogo)),
+    tunerLoader.loadAsync(encodeURI(tunerModelPaths.left)),
+    tunerLoader.loadAsync(encodeURI(tunerModelPaths.right)),
+    layerLoader.loadAsync(encodeURI(layerModelPaths.body))
   ]);
+  replaceTuners(mainModel, leftTuner.scene, rightTuner.scene);
+  seatNeckAssembly(mainModel);
+  replaceBody(mainModel, bodyLayer);
   variantLayers.forEach(({ variant, role, layer }) => {
     const isDefaultTop = variant === "default" && role === "top";
     prepareForcedLayerModel(
@@ -1699,7 +1896,8 @@ async function init() {
       isDefaultTop ? child => isNamedLayerMesh(child, "Top") : null
     );
     tagGeometryVariant(layer, variant);
-    if (role === "top") keepOuterSurfaceFaces(layer, .9, .025);
+    // Keep the edge thickness without reintroducing hidden horizontal construction faces.
+    if (role === "top") keepOuterSurfaceFaces(layer, .9, .025, true);
   });
   prepareForcedLayerModel(bodyBindingModel, "binding", "BodyBindingKorpus", 4);
   prepareForcedLayerModel(metalLogoModel, "metalLogo", "MetalLogo3MF", 8);
@@ -1707,6 +1905,7 @@ async function init() {
   model = new THREE.Group();
   model.name = "WeirdoConfiguredModel";
   model.add(mainModel);
+  model.add(bodyLayer);
   variantLayers.forEach(({ layer }) => model.add(layer));
   model.add(bodyBindingModel);
   container.dataset.viewerStatus = "models-loaded";
@@ -1759,12 +1958,22 @@ async function init() {
   await waitForStableFrames();
   render();
   window.addEventListener("resize", resize);
+  new ResizeObserver(resize).observe(container);
   window.dispatchEvent(new CustomEvent("weirdo:viewer3d-ready"));
   container.dataset.viewerStatus = "ready";
 }
 
-form.addEventListener("input", applyMaterials);
-form.addEventListener("change", applyMaterials);
+let materialUpdateFrame = 0;
+function requestMaterialUpdate(event) {
+  if (event.target.matches('input[type="text"], input[type="email"], textarea')) return;
+  if (materialUpdateFrame) return;
+  materialUpdateFrame = requestAnimationFrame(() => {
+    materialUpdateFrame = 0;
+    applyMaterials();
+  });
+}
+form.addEventListener("input", requestMaterialUpdate);
+form.addEventListener("change", requestMaterialUpdate);
 frameSlider.addEventListener("input", requestViewUpdate);
 zoomSlider.addEventListener("input", requestViewUpdate);
 

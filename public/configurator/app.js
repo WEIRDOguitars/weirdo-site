@@ -63,7 +63,7 @@ const burstColors = [
   ["Bez barwnika", "natural", "natural"],
   ["Evil green", "burst:evil-green", "linear-gradient(135deg, #435139 0%, #849b49 35%, #b4c65b 100%)"],
   ["Devil red", "burst:devil-red", "linear-gradient(135deg, #170203 0%, #9b1512 42%, #e07821 100%)"],
-  ["Purple rain", "burst:purple-rain", "linear-gradient(135deg, #12051d 0%, #61307f 48%, #1b66b0 100%)"],
+  ["Purple rain", "burst:purple-rain", "linear-gradient(135deg, #25232d 0%, #514154 48%, #986581 100%)"],
   ["Sunshine", "burst:sunshine", "linear-gradient(135deg, #6f2d08 0%, #db7e21 48%, #f0c83a 100%)"],
   ["Foggy", "burst:foggy", "linear-gradient(135deg, #060606 0%, #565b5f 52%, #c1b9a7 100%)"],
   ["Żółty", "#d6a824"],
@@ -87,7 +87,7 @@ const bindingOptions = [
   ["Czerwony", "#a32c36"],
   ["Zielony", "#36794e"],
   ["Fioletowy", "#70418f"],
-  ["Żółty", "#b59a35"],
+  ["Złoto-perłowy", "#d6a128"],
   ["Ciemny szary", "#4d4d4d"]
 ];
 
@@ -297,6 +297,7 @@ function paintTextureForColor(color) {
 
 function applySolidPaintFinish(context, width, height, color) {
   context.save();
+  context.globalAlpha = .85;
   context.globalCompositeOperation = "screen";
   const shine = context.createLinearGradient(width * .12, height * .08, width * .86, height * .92);
   shine.addColorStop(0, "rgba(255,255,255,.34)");
@@ -345,6 +346,7 @@ function drawCoverTexture(targetCtx, texture, wood, color = "", area = "") {
   const topTextureOffset = shiftedTopTexture ? -.1 : 0;
   targetCtx.save();
   targetCtx.filter = color === "burst:evil-green" && (wood === "Klon falisty" || wood === "Topola czeczot") ? "contrast(1.22) brightness(.94)"
+    : color === "burst:purple-rain" ? (wood === "Klon falisty" ? "contrast(1.35) brightness(.92)" : "contrast(1.6) brightness(.82)")
     : color === "natural"
     ? wood === "Klon falisty" ? "none" : wood === "Topola czeczot" ? "contrast(1.12) brightness(.98) saturate(1.04)" : "contrast(1.08) brightness(.92) saturate(1.04)"
     : wood === "Klon falisty" ? "contrast(1.08) brightness(.92) saturate(1.03)" : wood === "Topola czeczot" ? "contrast(1.32) brightness(.82)" : wood === "Mahoń" ? "contrast(1.2) brightness(.78) saturate(1.08)" : "contrast(1.2) brightness(.75)";
@@ -372,7 +374,7 @@ function burstDefinition(color) {
   return {
     "burst:evil-green": { edge: "#435139", mid: "#849b49", center: "#b4c65b" },
     "burst:devil-red": { edge: "#150202", mid: "#9b1512", center: "#e07922" },
-    "burst:purple-rain": { edge: "#12051d", mid: "#63307f", center: "#1b66b0" },
+    "burst:purple-rain": { edge: "#25232d", mid: "#514154", center: "#986581" },
     "burst:sunshine": { edge: "#71310a", mid: "#db7e21", center: "#f0c83a" },
     "burst:foggy": { edge: "#070707", mid: "#54595e", center: "#beb7a8" }
   }[color] || null;
@@ -428,6 +430,12 @@ function applyBurstColor(context, width, height, color, wood = "") {
   context.globalAlpha = mapleBurst ? .22 : .3;
   context.fillStyle = centerLift;
   context.fillRect(0, 0, width, height);
+  if (color === "burst:purple-rain") {
+    context.globalCompositeOperation = "multiply";
+    context.globalAlpha = .28;
+    context.fillStyle = "#554959";
+    context.fillRect(0, 0, width, height);
+  }
 
   context.restore();
   context.globalCompositeOperation = "source-over";
@@ -469,6 +477,7 @@ function woodLayer(mask, color, wood, finish, area = "") {
 
   layerCtx.globalCompositeOperation = "source-over";
   if (finish === "Gloss") {
+    layerCtx.globalAlpha = .85;
     const shine = layerCtx.createLinearGradient(0, 420, 0, 1420);
     shine.addColorStop(0, "rgba(255,255,255,.14)");
     shine.addColorStop(.42, "rgba(255,255,255,.02)");
@@ -476,6 +485,7 @@ function woodLayer(mask, color, wood, finish, area = "") {
     shine.addColorStop(1, "rgba(255,255,255,.12)");
     layerCtx.fillStyle = shine;
     layerCtx.fillRect(0, 0, layer.width, layer.height);
+    layerCtx.globalAlpha = 1;
   } else {
     layerCtx.globalAlpha = .16;
     layerCtx.fillStyle = "#111";
@@ -1024,6 +1034,7 @@ function setRadioValue(name, value) {
 }
 
 function setFormValue(name, value) {
+  if (name === "binding" && value === "Żółty") value = "Złoto-perłowy";
   const controls = Array.from(form.querySelectorAll(`[name="${CSS.escape(name)}"]`));
   if (!controls.length) return false;
   const stringValue = String(value ?? "");
@@ -1171,6 +1182,7 @@ window.addEventListener("weirdo:viewer3d-ready", () => {
 });
 
 window.addEventListener("weirdo:viewer3d-failed", event => {
+  stageWrap?.classList.remove("viewer-3d-ready");
   stageWrap?.classList.add("viewer-3d-fallback");
   loading.hidden = true;
   drawCanvas(true);
