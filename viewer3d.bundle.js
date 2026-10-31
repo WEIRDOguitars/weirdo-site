@@ -38915,7 +38915,8 @@ void main() {
       mesh.material = materialForRole(mesh.userData.role);
       const pearl = isPearlBinding(form.querySelector('[name="binding"]:checked'));
       const headBinding = mesh.userData.role === "binding" && mesh.parent?.name === "Visual_v7" && mesh.name === "Body12";
-      if (headBinding || mesh.userData.role === "tunerButtons" && !pearl) {
+      const headLogo = mesh.userData.role === "binding" && mesh.parent?.name === "Visual_v7" && ["Body11", "Body13"].includes(mesh.name);
+      if (headBinding || !pearl && (headLogo || mesh.userData.role === "tunerButtons")) {
         mesh.material.clearcoat = pearl ? 0.25 : 0;
         mesh.material.clearcoatRoughness = pearl ? 0.12 : 0.32;
         mesh.material.roughness = 0.34;
