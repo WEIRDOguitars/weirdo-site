@@ -38040,6 +38040,7 @@ void main() {
     const context = canvas.getContext("2d");
     const isMaple = key === "mapleFlame";
     const isPoplar = key === "poplarBurl";
+    const isPoplarYellow = isPoplar && color.toLowerCase() === "#d6a824";
     const vivid = isMaple || isPoplar;
     const textureOffsetY = area2 === "top" && vivid ? -height * 0.1 : 0;
     const baseColors = {
@@ -38056,7 +38057,7 @@ void main() {
     } else {
       context.clearRect(0, 0, width, height);
     }
-    context.filter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)" : color === "burst:purple-rain" && vivid ? isMaple ? "contrast(1.4) brightness(.9)" : "contrast(2.55) brightness(.62) saturate(1.45)" : color === "natural" ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
+    context.filter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)" : isPoplarYellow ? "contrast(1.7) brightness(.9) saturate(1.12)" : color === "burst:purple-rain" && vivid ? isMaple ? "contrast(1.4) brightness(.9)" : "contrast(2.55) brightness(.62) saturate(1.45)" : color === "natural" ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
     context.drawImage(image, 0, textureOffsetY, width, height);
     if (textureOffsetY < 0) context.drawImage(image, 0, height + textureOffsetY, width, height);
     context.filter = "none";
@@ -38068,7 +38069,7 @@ void main() {
       } else {
         if (vivid && tintableWoodArea) {
           context.globalCompositeOperation = "multiply";
-          context.globalAlpha = isMaple ? 0.23 : 0.27;
+          context.globalAlpha = isPoplarYellow ? 0.1 : isMaple ? 0.23 : 0.27;
           context.fillStyle = "#050505";
           context.fillRect(0, 0, width, height);
         }
@@ -38077,7 +38078,7 @@ void main() {
         context.fillStyle = color;
         context.fillRect(0, 0, width, height);
         context.globalCompositeOperation = "multiply";
-        context.globalAlpha = isMaple ? 0.46 : vivid ? 0.58 : 0.42;
+        context.globalAlpha = isPoplarYellow ? 0.32 : isMaple ? 0.46 : vivid ? 0.58 : 0.42;
         context.fillRect(0, 0, width, height);
       }
     }

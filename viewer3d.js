@@ -309,6 +309,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   const context = canvas.getContext("2d");
   const isMaple = key === "mapleFlame";
   const isPoplar = key === "poplarBurl";
+  const isPoplarYellow = isPoplar && color.toLowerCase() === "#d6a824";
   const vivid = isMaple || isPoplar;
   const textureOffsetY = area === "top" && vivid ? -height * .1 : 0;
   const baseColors = {
@@ -327,6 +328,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
     context.clearRect(0, 0, width, height);
   }
   context.filter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)"
+    : isPoplarYellow ? "contrast(1.7) brightness(.9) saturate(1.12)"
     : color === "burst:purple-rain" && vivid ? (isMaple ? "contrast(1.4) brightness(.9)" : "contrast(2.55) brightness(.62) saturate(1.45)")
     : color === "natural"
     ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)"
@@ -345,7 +347,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
     } else {
       if (vivid && tintableWoodArea) {
         context.globalCompositeOperation = "multiply";
-        context.globalAlpha = isMaple ? .23 : .27;
+        context.globalAlpha = isPoplarYellow ? .1 : isMaple ? .23 : .27;
         context.fillStyle = "#050505";
         context.fillRect(0, 0, width, height);
       }
@@ -354,7 +356,7 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
       context.fillStyle = color;
       context.fillRect(0, 0, width, height);
       context.globalCompositeOperation = "multiply";
-      context.globalAlpha = isMaple ? .46 : vivid ? .58 : .42;
+      context.globalAlpha = isPoplarYellow ? .32 : isMaple ? .46 : vivid ? .58 : .42;
       context.fillRect(0, 0, width, height);
     }
   }
