@@ -1257,3 +1257,31 @@ textarea {
   box-shadow: none !important;
 }
 .unselected-preview i { display: none; }
+
+.app-shell[hidden], .setup-picker[hidden] { display: none !important; }
+.setup-picker { max-width: 1400px; margin: 0 auto; padding: 28px clamp(18px, 4vw, 60px) 64px; }
+.setup-picker .brand-header { margin-bottom: 48px; }
+.setup-intro { max-width: 700px; margin-bottom: 32px; }
+.setup-eyebrow { color: var(--gold); text-transform: uppercase; letter-spacing: .16em; font-size: 11px; }
+.setup-intro h1 { font-family: "Playfair Display", serif; font-size: clamp(32px, 4vw, 52px); margin: 10px 0 14px; }
+.setup-intro p { color: var(--muted); line-height: 1.7; }
+.setup-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.setup-card { min-width: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--card); padding-bottom: 18px; }
+.setup-card img { width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: contain; display: block; background: #191816; }
+.setup-card h2 { font-family: "Playfair Display", serif; font-size: 23px; margin: 18px; }
+.setup-card .primary-button { width: auto; max-width: calc(100% - 36px); height: 32px; padding: 0 14px; margin: 0 18px; font-size: 10px; letter-spacing: .08em; }
+.setup-picker-open { overflow-y: auto; }
+.generating-setup-previews .app-shell {
+  display: block !important; position: fixed; left: -10000px; top: 0; width: 420px; height: 700px;
+}
+.generating-setup-previews .preview-panel { position: static !important; width: 420px !important; padding: 0 !important; height: 700px !important; }
+.generating-setup-previews .stage-wrap { position: relative !important; inset: auto !important; width: 420px !important; height: 560px !important; min-height: 560px !important; max-height: none !important; }
+.generating-setup-previews .controls-panel { display: none; }
+@media (max-width: 1000px) { .setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) {
+  .setup-picker { padding: 18px 14px 36px; }
+  .setup-picker .brand-header { margin-bottom: 32px; }
+  .setup-grid { gap: 12px; }
+  .setup-card h2 { font-size: 19px; margin: 12px; }
+  .setup-card .primary-button { max-width: calc(100% - 24px); height: auto; min-height: 32px; margin: 0 12px; padding: 8px 10px; }
+}

@@ -7,6 +7,8 @@ if (!base) throw new Error('Usage: node scripts/check-configurator-assets.mjs ht
 const source = await readFile(new URL('../viewer3d.js', import.meta.url), 'utf8');
 const assets = [...new Set([...source.matchAll(/\$\{assetBase\}\/([^`]+)`/g)].map(match => match[1]))];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const setups = JSON.parse(await readFile(new URL('../public/configurator/setups.json', import.meta.url), 'utf8'));
+assets.push('setup-gallery.js', 'setups.json', 'assets/setups/blank.jpg', ...setups.map(setup => setup.thumbnail));
 let failures = 0;
 for (const asset of ['index.html', 'app.js', 'styles.css', 'viewer3d.bundle.js', ...assets]) {
   try {

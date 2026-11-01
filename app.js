@@ -1137,6 +1137,11 @@ async function importModelFromFile(file) {
   showToast("Model został wczytany. Możesz dalej edytować konfigurację.");
 }
 
+window.weirdoConfigurator = {
+  reset: resetForm,
+  applySelections: applyImportedSelections
+};
+
 function applyHardwarePreset(value) {
   setRadioValue("knobColor", value);
   setRadioValue("pickups", "Otwarta ramka");
