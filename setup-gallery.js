@@ -60,6 +60,86 @@
     }
   }
 
+  function showSpecification(setup) {
+    const values = setup.selections;
+    const dialog = document.createElement("dialog");
+    dialog.className = "setup-specification";
+    dialog.setAttribute("aria-labelledby", "setupSpecTitle");
+    const header = document.createElement("header");
+    const title = document.createElement("h2");
+    title.id = "setupSpecTitle";
+    title.textContent = setup.name + " — specyfikacja";
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "ghost-button";
+    close.textContent = "Zamknij";
+    close.addEventListener("click", () => dialog.close());
+    header.append(title, close);
+    dialog.append(header);
+    const optionLabel = (field, value) => {
+      const input = Array.from(document.querySelectorAll('#configForm input[name="' + field + '"]')).find(input => input.value === value);
+      return input?.closest("label")?.querySelector("strong")?.textContent || value;
+    };
+    const wiringInput = Array.from(document.querySelectorAll('#configForm input[name="electronicsWiring"]')).find(input => input.value === values.electronicsWiring);
+    const wiringDescription = Array.from(wiringInput?.closest("label")?.querySelectorAll("small") || []).map(item => item.textContent).join(" ");
+    const groups = [
+      ["Elektronika", [
+        ["Układ", optionLabel("electronicsLayout", values.electronicsLayout)],
+        ["Wariant", optionLabel("electronicsWiring", values.electronicsWiring)],
+        ["Sterowanie", wiringDescription]
+      ]],
+      ["Osprzęt i pickupy", [
+        ["Kolor osprzętu", values.hardwareColor], ["Kolor gałek", values.knobColor],
+        ["Pickupy", values.pickups], ["Ramka", values.pickupFrameColor],
+        ["Środek", values.pickupCenterColor],
+        ["Grafika", values.pickupCenterColor === "Weirdo" ? values.pickupDesign || "Gładki" : null],
+        ["Mostek", values.bridge], ["Klucze", values.tuners], ["Straplocki", values.straplocks]
+      ]],
+      ["Parametry techniczne", [
+        ["Menzura", values.scale], ["Liczba progów", values.fretCount],
+        ["Materiał progów", values.fretMaterial], ["Rozmiar progów", values.fretSize], ["Siodełko", values.nut]
+      ]],
+      ["Drewno i wykończenie", [
+        ["Top", [values.topWood, selectedColorName(values.topColor, values.topWood), values.topFinish].filter(Boolean).join(" / ")],
+        ["Boki", [values.sideWood, selectedColorName(values.sideColor, values.sideWood), values.sideFinish].filter(Boolean).join(" / ")],
+        ["Główka", [values.headMode, values.headFinish].filter(Boolean).join(" / ")],
+        ["Korpus", [values.bodyWood, values.bodyFinish].filter(Boolean).join(" / ")],
+        ["Podstrunnica", values.fretboard], ["Binding", values.bindingShape],
+        ["Markery", values.bindingShape === "Binding 2" ? values.bindingDots || "Czysty" : null],
+        ["Marker na 12. progu", values.fretMarker === "Domyślny" ? (values.bindingDots === "Okrągłe markery" ? "3 kółka" : "Bez dodatkowego markera") : optionLabel("fretMarker", values.fretMarker)],
+        ["Kolor detali", values.binding]
+      ]]
+    ];
+    for (const [name, rows] of groups) {
+      const section = document.createElement("section");
+      const heading = document.createElement("h3");
+      heading.textContent = name;
+      const list = document.createElement("dl");
+      for (const [label, value] of rows) {
+        if (!value) continue;
+        const term = document.createElement("dt");
+        term.textContent = label;
+        const description = document.createElement("dd");
+        description.textContent = value;
+        list.append(term, description);
+      }
+      section.append(heading, list);
+      dialog.append(section);
+    }
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "primary-button";
+    edit.textContent = "Edytuj ten setup";
+    edit.addEventListener("click", () => {
+      dialog.close();
+      location.hash = "edit/" + setup.id;
+    });
+    dialog.append(edit);
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
   function card(setup) {
     const article = document.createElement("article");
     article.className = "setup-card";
@@ -78,7 +158,19 @@
     button.textContent = setup.id === "blank" ? "Zacznij od początku" : "Edytuj";
     button.setAttribute("aria-label", setup.id === "blank" ? "Zacznij od początku" : "Edytuj " + setup.name);
     button.addEventListener("click", () => { location.hash = "edit/" + setup.id; });
-    article.append(img, title, button);
+    const actions = document.createElement("div");
+    actions.className = "setup-actions";
+    actions.append(button);
+    if (setup.selections) {
+      const specification = document.createElement("button");
+      specification.type = "button";
+      specification.className = "ghost-button";
+      specification.textContent = "Specyfikacja";
+      specification.setAttribute("aria-label", "Specyfikacja " + setup.name);
+      specification.addEventListener("click", () => showSpecification(setup));
+      actions.append(specification);
+    }
+    article.append(img, title, actions);
     return article;
   }
 

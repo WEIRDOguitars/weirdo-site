@@ -1271,6 +1271,22 @@ textarea {
 .setup-card h2 { font-family: "Playfair Display", serif; font-size: 23px; margin: 18px; }
 .setup-card .primary-button { width: auto; max-width: calc(100% - 36px); height: 32px; padding: 0 14px; margin: 0 18px; font-size: 10px; letter-spacing: .08em; }
 .setup-picker-open { overflow-y: auto; }
+.setup-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 18px; }
+.setup-card .setup-actions button { width: auto; max-width: 100%; height: auto; min-height: 32px; margin: 0; padding: 8px 10px; font-size: 10px; }
+.setup-specification { width: min(680px, calc(100% - 28px)); max-height: 85dvh; box-sizing: border-box; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: #1b1a17; color: var(--text); overflow-y: auto; }
+.setup-specification::backdrop { background: rgba(0, 0, 0, .75); }
+.setup-specification header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.setup-specification h2 { margin: 0; font-family: "Playfair Display", serif; font-size: 26px; }
+.setup-specification h3 { margin: 26px 0 10px; color: var(--gold); font-size: 14px; }
+.setup-specification dl { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 2fr); gap: 10px 18px; font-size: 13px; line-height: 1.5; }
+.setup-specification dt { color: var(--muted); }
+.setup-specification dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .setup-actions { margin: 0 12px; }
+  .setup-specification { padding: 18px; }
+  .setup-specification h2 { font-size: 21px; }
+  .setup-specification dl { gap: 10px; }
+}
 .generating-setup-previews .app-shell {
   display: block !important; position: fixed; left: -10000px; top: 0; width: 420px; height: 700px;
 }
