@@ -37797,7 +37797,210 @@ void main() {
     });
   }
 
+  // fretboard-variants.js
+  function installFretboardVariants(mainModel, variants, markers = []) {
+    mainModel.updateWorldMatrix(true, true);
+    const original = mainModel.getObjectByName("podstrunnica");
+    if (!original?.isMesh) throw new Error("Missing reference fretboard");
+    const target = new Box3().setFromObject(original);
+    const parent = original.parent;
+    original.userData.fretboardVariant = "Standard WEIRDO";
+    parent.children.forEach((mesh) => {
+      const number = /^Body(\d+)$/.exec(mesh.name)?.[1];
+      if (mesh.isMesh && (Number(number) === 10 || Number(number) >= 14 && Number(number) <= 68)) {
+        mesh.userData.fretboardVariant = "Standard WEIRDO";
+        if (Number(number) >= 48 && Number(number) <= 56) mesh.userData.defaultFretMarker = true;
+      }
+    });
+    for (const { name, layer } of variants) {
+      layer.updateWorldMatrix(true, true);
+      const bounds = new Box3().setFromObject(layer);
+      const size = bounds.getSize(new Vector3());
+      const targetSize = target.getSize(new Vector3());
+      if (Math.abs(size.y - targetSize.y) > 1 || Math.abs(size.x - targetSize.x) > 1) {
+        throw new Error(`Unexpected fretboard dimensions: ${name}`);
+      }
+      const translation = new Matrix4().makeTranslation(
+        (target.min.x + target.max.x - bounds.min.x - bounds.max.x) / 2,
+        target.max.y - bounds.max.y,
+        44.80460548400879 - bounds.max.z
+      );
+      const toParent = parent.matrixWorld.clone().invert().multiply(translation);
+      const group = new Group();
+      group.name = name;
+      layer.traverse((mesh) => {
+        if (!mesh.isMesh) return;
+        const geometry = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+        geometry.applyMatrix4(mesh.matrixWorld);
+        const dotFaces = /* @__PURE__ */ new Set();
+        if (name === "Binding 4") {
+          const source = geometry.getAttribute("position");
+          const centerX = (bounds.min.x + bounds.max.x) / 2;
+          for (let i2 = 0; i2 < source.count; i2 += 3) {
+            if (![0, 1, 2].every((j) => Math.abs(source.getZ(i2 + j) + 3) < 1e-3 && Math.abs(source.getX(i2 + j) - centerX) < 18)) continue;
+            dotFaces.add(i2);
+            for (let j = 0; j < 3; j++) source.setZ(i2 + j, bounds.max.z);
+          }
+        }
+        geometry.applyMatrix4(toParent);
+        const positions = geometry.getAttribute("position");
+        const colors = geometry.getAttribute("color");
+        if (!colors) throw new Error(`Missing CAD surface colors: ${name}`);
+        const surfaces = { fretboard: [], binding: [], defaultMarker: [] };
+        for (let i2 = 0; i2 < positions.count; i2 += 3) {
+          const resin = dotFaces.has(i2) || colors.getX(i2) > colors.getY(i2) * 3 && colors.getX(i2) > colors.getZ(i2) * 3;
+          const center = new Vector3();
+          for (let j = i2; j < i2 + 3; j++) center.add(new Vector3().fromBufferAttribute(positions, j));
+          center.multiplyScalar(1 / 3).applyMatrix4(parent.matrixWorld);
+          const isDefaultMarker = resin && Math.abs(center.x - (target.min.x + target.max.x) / 2) < 18 && center.y > 2210 && center.y < 2260;
+          const output = surfaces[isDefaultMarker ? "defaultMarker" : resin ? "binding" : "fretboard"];
+          for (let j = i2; j < i2 + 3; j++) output.push(positions.getX(j), positions.getY(j), positions.getZ(j));
+        }
+        for (const [role, points] of Object.entries(surfaces)) {
+          if (!points.length && role === "defaultMarker") continue;
+          if (!points.length) throw new Error(`Missing ${role} surface: ${name}`);
+          const partGeometry = new BufferGeometry();
+          partGeometry.setAttribute("position", new Float32BufferAttribute(points, 3));
+          partGeometry.computeVertexNormals();
+          const part = new Mesh(partGeometry, new MeshBasicMaterial());
+          part.name = `${name}-${role}`;
+          part.userData.forceRole = role === "defaultMarker" ? "markers" : role;
+          part.userData.defaultFretMarker = role === "defaultMarker";
+          part.userData.fretboardVariant = name;
+          group.add(part);
+        }
+        geometry.dispose();
+      });
+      parent.add(group);
+    }
+    for (const { name, layer } of markers) {
+      layer.updateWorldMatrix(true, true);
+      const bounds = new Box3().setFromObject(layer);
+      const toParent = parent.matrixWorld.clone().invert().multiply(new Matrix4().makeTranslation(
+        (target.min.x + target.max.x - bounds.min.x - bounds.max.x) / 2,
+        target.max.y - bounds.max.y,
+        44.82460548400879
+      ));
+      const points = [];
+      layer.traverse((mesh) => {
+        if (!mesh.isMesh) return;
+        const geometry2 = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
+        geometry2.applyMatrix4(mesh.matrixWorld);
+        const position = geometry2.getAttribute("position");
+        for (let i2 = 0; i2 < position.count; i2 += 3) {
+          const triangle = [0, 1, 2].map((j) => new Vector3().fromBufferAttribute(position, i2 + j));
+          if (!triangle.every((v) => Math.abs(v.z - (name === "Marker 1" ? -3 : 3)) < 1e-3)) continue;
+          for (const v of triangle) {
+            v.z = 0;
+            v.applyMatrix4(toParent);
+            points.push(v.x, v.y, v.z);
+          }
+        }
+        geometry2.dispose();
+      });
+      if (!points.length) throw new Error(`Missing marker face: ${name}`);
+      const geometry = new BufferGeometry();
+      geometry.setAttribute("position", new Float32BufferAttribute(points, 3));
+      geometry.computeVertexNormals();
+      const marker = new Mesh(geometry, new MeshBasicMaterial());
+      marker.name = name;
+      marker.userData.forceRole = "markers";
+      marker.userData.fretMarker = name;
+      parent.add(marker);
+    }
+  }
+
+  // pickup-inserts.js
+  function installPickupInserts(model2, designs, roleOf) {
+    model2.updateWorldMatrix(true, true);
+    const frames = [];
+    model2.traverse((mesh) => {
+      if (mesh.isMesh && roleOf(mesh) === "pickupFrame") frames.push(mesh);
+    });
+    if (frames.length !== 2) throw new Error("Expected two reference pickup frames");
+    for (const { name, layer } of designs) {
+      layer.updateWorldMatrix(true, true);
+      const sourceFrame = [];
+      const plates = [];
+      layer.traverse((mesh) => {
+        if (!mesh.isMesh) return;
+        (mesh.name.toLowerCase().includes("ramka") ? sourceFrame : plates).push(mesh);
+      });
+      if (sourceFrame.length !== 1 || !plates.length) throw new Error("Invalid pickup insert assembly");
+      const reference = new Box3().setFromObject(sourceFrame[0]);
+      for (const frame of frames) {
+        const target = new Box3().setFromObject(frame);
+        const referenceSize = reference.getSize(new Vector3());
+        const targetSize = target.getSize(new Vector3());
+        if (Math.abs(referenceSize.x - targetSize.x) > 0.1 || Math.abs(referenceSize.y - targetSize.y) > 0.1) {
+          throw new Error("Pickup insert frame dimensions do not match");
+        }
+        const delta = target.getCenter(new Vector3()).sub(reference.getCenter(new Vector3()));
+        delta.z = target.max.z - reference.max.z;
+        const transform = frame.parent.matrixWorld.clone().invert().multiply(new Matrix4().makeTranslation(delta.x, delta.y, delta.z));
+        for (const plate of plates) {
+          const geometry = plate.geometry.index ? plate.geometry.toNonIndexed() : plate.geometry.clone();
+          geometry.applyMatrix4(plate.matrixWorld);
+          geometry.applyMatrix4(transform);
+          const colors = geometry.getAttribute("color");
+          const positions = geometry.getAttribute("position");
+          if (!colors) throw new Error("Pickup insert is missing CAD face colors");
+          const surfaces = { pigment: [], metal: [] };
+          for (let i2 = 0; i2 < positions.count; i2 += 3) {
+            const blue = colors.getZ(i2) > colors.getX(i2) * 1.5 && colors.getZ(i2) > colors.getY(i2) * 1.5;
+            const output = surfaces[blue ? "pigment" : "metal"];
+            for (let j = i2; j < i2 + 3; j++) output.push(positions.getX(j), positions.getY(j), positions.getZ(j));
+          }
+          if (!surfaces.pigment.length) throw new Error("Pickup insert has no blue pigment faces");
+          for (const [surface, vertices] of Object.entries(surfaces)) {
+            if (!vertices.length) continue;
+            const result = new BufferGeometry();
+            result.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+            result.computeVertexNormals();
+            const mesh = new Mesh(result, new MeshStandardMaterial());
+            mesh.name = "WeirdoInsert-" + surface;
+            mesh.userData.forceRole = "pickupCenter";
+            mesh.userData.pickupDesign = name;
+            mesh.userData.pickupPigment = surface === "pigment";
+            frame.parent.add(mesh);
+          }
+          geometry.dispose();
+        }
+      }
+    }
+  }
+
+  // preview-selection.js
+  var elementFields = {
+    top: ["topWood", "topColor", "topFinish"],
+    sides: ["sideWood", "sideColor", "sideFinish"],
+    head: ["headMode", "headFinish"],
+    body: ["bodyWood", "bodyFinish"],
+    fretboard: ["fretboard"],
+    binding: ["binding", "bindingShape", "bindingDots", "fretMarker"],
+    frets: ["fretMaterial", "fretSize"],
+    hardware: ["hardwareColor", "bridge", "tuners", "straplocks", "electronicsLayout", "electronicsWiring", "singlePickupWiring"],
+    knobs: ["knobColor"],
+    pickupFrame: ["pickupFrameColor", "pickups"],
+    pickupCenter: ["pickupCenterColor", "pickupDesign", "pickups"],
+    nut: ["nut"]
+  };
+  function isElementActive(role, active) {
+    const aliases = {
+      tunerButtons: "binding",
+      markers: "binding",
+      bodyBindingRim: "binding",
+      bodyBindingGlow: "binding",
+      tuners: "hardware",
+      metalLogo: "hardware",
+      pickupMagnets: "pickupCenter",
+      pickup: "pickupCenter"
+    };
+    return active.has(aliases[role] || role);
+  }
+
   // viewer3d.js
+  window.weirdoPreviewFields = elementFields;
   var container = document.querySelector("#guitarViewer3d");
   var form = document.querySelector("#configForm");
   var frameSlider = document.querySelector("#frameSlider");
@@ -37828,6 +38031,20 @@ void main() {
     }
   };
   var metalLogoImagePath = `${assetBase}/assets/logo-weirdo.png`;
+  var pickupDesignPaths = {
+    "Weirdo 1": `${assetBase}/models/pickups/weirdo-1.3mf`
+  };
+  var fretboardVariantPaths = {
+    "Binding 1": `${assetBase}/models/fretboard/binding-1.3mf`,
+    "Binding 2": `${assetBase}/models/fretboard/binding-2.3mf`,
+    "Binding 3": `${assetBase}/models/fretboard/binding-3.3mf`,
+    "Binding 4": `${assetBase}/models/fretboard/binding-4.3mf`
+  };
+  var fretMarkerPaths = {
+    "Marker 1": `${assetBase}/models/fretboard/marker-1.3mf`,
+    "Marker 2": `${assetBase}/models/fretboard/marker-2.3mf`,
+    "Marker 3": `${assetBase}/models/fretboard/marker-3.3mf`
+  };
   var texturePaths = {
     mapleBirdseye: `${assetBase}/tekstury/runtime/maple-birdseye.png`,
     mapleFlame: `${assetBase}/tekstury/runtime/maple-flame.png`,
@@ -38042,6 +38259,7 @@ void main() {
     const isPoplar = key === "poplarBurl";
     const isPoplarYellow = isPoplar && color.toLowerCase() === "#d6a824";
     const vivid = isMaple || isPoplar;
+    const isVividRed = vivid && color.toLowerCase() === "#c41420";
     const textureOffsetY = area2 === "top" && vivid ? -height * 0.1 : 0;
     const baseColors = {
       mapleFlame: "#c79242",
@@ -38057,7 +38275,7 @@ void main() {
     } else {
       context.clearRect(0, 0, width, height);
     }
-    context.filter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)" : isPoplarYellow ? "contrast(1.7) brightness(.9) saturate(1.12)" : color === "burst:purple-rain" && vivid ? isMaple ? "contrast(1.4) brightness(.9)" : "contrast(2.55) brightness(.62) saturate(1.45)" : color === "natural" ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
+    context.filter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)" : isVividRed ? isMaple ? "grayscale(1) contrast(1.55) brightness(.8)" : "grayscale(1) contrast(1.45) brightness(.94)" : isPoplarYellow ? "contrast(1.7) brightness(.9) saturate(1.12)" : color === "burst:purple-rain" && vivid ? isMaple ? "contrast(1.4) brightness(.9)" : "contrast(2.55) brightness(.62) saturate(1.45)" : color === "natural" ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
     context.drawImage(image, 0, textureOffsetY, width, height);
     if (textureOffsetY < 0) context.drawImage(image, 0, height + textureOffsetY, width, height);
     context.filter = "none";
@@ -38069,7 +38287,7 @@ void main() {
       } else {
         if (vivid && tintableWoodArea) {
           context.globalCompositeOperation = "multiply";
-          context.globalAlpha = isPoplarYellow ? 0.1 : isMaple ? 0.23 : 0.27;
+          context.globalAlpha = isVividRed ? isMaple ? 0.2 : 0.12 : isPoplarYellow ? 0.1 : isMaple ? 0.23 : 0.27;
           context.fillStyle = "#050505";
           context.fillRect(0, 0, width, height);
         }
@@ -38078,7 +38296,7 @@ void main() {
         context.fillStyle = color;
         context.fillRect(0, 0, width, height);
         context.globalCompositeOperation = "multiply";
-        context.globalAlpha = isPoplarYellow ? 0.32 : isMaple ? 0.46 : vivid ? 0.58 : 0.42;
+        context.globalAlpha = isVividRed ? 0.76 : isPoplarYellow ? 0.32 : isMaple ? 0.46 : vivid ? 0.58 : 0.42;
         context.fillRect(0, 0, width, height);
       }
     }
@@ -38880,7 +39098,7 @@ void main() {
     if (role === "frets") return fretMaterial();
     if (role === "nut") return physicalMaterial({ color: solidColors[fieldValue("nut")] || solidColors.Ko\u015B\u0107, roughness: 0.4 });
     if (role === "pickupFrame") return hardwareMaterial(fieldValue("pickupFrameColor"));
-    if (role === "pickupCenter") return hardwareMaterial(fieldValue("pickupCenterColor"));
+    if (role === "pickupCenter") return fieldValue("pickupCenterColor") === "Weirdo" ? bindingMaterial() : hardwareMaterial(fieldValue("pickupCenterColor"));
     if (role === "pickupMagnets") return pickupMagnetMaterial();
     if (role === "pickup") return pickupMaterial();
     if (role === "metalLogo") return metalLogoMaterial();
@@ -38892,13 +39110,35 @@ void main() {
   function applyMaterials() {
     const previousMaterials = new Set(meshes.filter((mesh) => !mesh.userData.preserveMaterial).flatMap((mesh) => Array.isArray(mesh.material) ? mesh.material : [mesh.material]));
     const activeVariant = activeElectronicsVariant();
+    const bindingStyle = fieldValue("bindingShape") || "Binding 1";
+    const activeMarker = fieldValue("fretMarker") || "Domy\u015Blny";
+    const activeFretboard = bindingStyle === "Binding 1" ? activeMarker === "Triple dots" ? "Binding 3" : "Binding 1" : fieldValue("bindingDots") === "Okr\u0105g\u0142e markery" ? "Binding 4" : "Binding 2";
+    const customPickup = fieldValue("pickups") === "Otwarta ramka" && fieldValue("pickupCenterColor") === "Weirdo";
+    const pickupDesign = fieldValue("pickupDesign") || "G\u0142adki";
     meshes.forEach((mesh) => {
+      if (mesh.userData.pickupDesign) {
+        if (!customPickup || mesh.userData.pickupDesign !== pickupDesign) {
+          mesh.visible = false;
+          return;
+        }
+      } else if (customPickup && pickupDesign !== "G\u0142adki" && mesh.userData.role === "pickupCenter") {
+        mesh.visible = false;
+        return;
+      }
+      if (mesh.userData.fretMarker && mesh.userData.fretMarker !== activeMarker) {
+        mesh.visible = false;
+        return;
+      }
+      if (mesh.userData.fretboardVariant && mesh.userData.fretboardVariant !== activeFretboard) {
+        mesh.visible = false;
+        return;
+      }
       if (mesh.userData.preserveMaterial) {
         mesh.material.needsUpdate = true;
         return;
       }
       if (mesh.userData.glossCoat) {
-        mesh.visible = (mesh.userData.geometryVariant || "default") === activeVariant;
+        mesh.visible = (mesh.userData.geometryVariant || "default") === activeVariant && isElementActive(mesh.userData.role, window.weirdoActiveElements || /* @__PURE__ */ new Set());
         mesh.material = glossCoatMaterial(mesh.userData.role);
         mesh.material.needsUpdate = true;
         return;
@@ -38912,7 +39152,7 @@ void main() {
         return;
       }
       mesh.visible = true;
-      mesh.material = materialForRole(mesh.userData.role);
+      mesh.material = mesh.userData.pickupDesign ? mesh.userData.pickupPigment ? bindingMaterial() : hardwareMaterial("Czarny") : materialForRole(mesh.userData.defaultFretMarker && !["Domy\u015Blny", "Triple dots"].includes(activeMarker) ? "fretboard" : mesh.userData.role);
       const pearl = isPearlBinding(form.querySelector('[name="binding"]:checked'));
       const headBinding = mesh.userData.role === "binding" && mesh.parent?.name === "Visual_v7" && mesh.name === "Body12";
       const headLogo = mesh.userData.role === "binding" && mesh.parent?.name === "Visual_v7" && ["Body11", "Body13"].includes(mesh.name);
@@ -38984,6 +39224,19 @@ void main() {
       }
       mesh.material.needsUpdate = true;
     });
+    meshes.forEach((mesh) => {
+      if (!mesh.visible || mesh.userData.glossCoat || mesh.userData.preserveMaterial) return;
+      let active = isElementActive(mesh.userData.role, window.weirdoActiveElements || /* @__PURE__ */ new Set());
+      if (mesh.userData.role === "pickupCenter" && fieldValue("pickupCenterColor") === "Weirdo") {
+        active ||= window.weirdoActiveElements?.has("binding");
+      }
+      if (active) return;
+      const original = mesh.material;
+      const neutral = new MeshStandardMaterial({ color: "#888888", roughness: 0.72, metalness: 0, side: original.side });
+      for (const key of ["depthTest", "depthWrite", "polygonOffset", "polygonOffsetFactor", "polygonOffsetUnits"]) neutral[key] = original[key];
+      mesh.material = neutral;
+      if (!mesh.userData.preserveMaterial) original.dispose();
+    });
     updateMetalLogoVisibility(pivot.rotation.y);
     const retainedMaterials = new Set(meshes.flatMap((mesh) => Array.isArray(mesh.material) ? mesh.material : [mesh.material]));
     const retainedMaps = new Set([...retainedMaterials].map((material) => material?.map));
@@ -39022,7 +39275,7 @@ void main() {
       );
       return;
     }
-    const bodyBox = roleBounds("binding", (mesh) => mesh.userData.forceRole === "binding") || roleBounds("top") || roleBounds("body");
+    const bodyBox = roleBounds("binding", (mesh) => mesh.userData.forceRole === "binding" && !mesh.userData.fretboardVariant) || roleBounds("top") || roleBounds("body");
     if (!bodyBox) {
       zoomFocusPoint.set(0, 0, 0);
       return;
@@ -39185,7 +39438,7 @@ void main() {
   }
   function alignMetalLogoGeometryLayer(object) {
     const topBox = roleBounds("top");
-    const bodyBindingBox = roleBounds("binding", (mesh) => mesh.userData.forceRole === "binding");
+    const bodyBindingBox = roleBounds("binding", (mesh) => mesh.userData.forceRole === "binding" && !mesh.userData.fretboardVariant);
     const bodyBox = bodyBindingBox || roleBounds("body") || topBox;
     if (!object || !topBox || !bodyBox) return;
     centerObjectGeometry(object);
@@ -39356,16 +39609,21 @@ void main() {
     const variantLayerPromises = Object.entries(electronicsGeometryVariants).flatMap(
       ([variant, paths]) => Object.entries(paths).map(([role, path]) => layerLoader.loadAsync(encodeURI(path)).then((layer) => ({ variant, role, layer })))
     );
-    const [mainModel, variantLayers, bodyBindingModel, metalLogoModel, leftTuner, rightTuner, bodyLayer] = await Promise.all([
+    const [mainModel, variantLayers, bodyBindingModel, metalLogoModel, leftTuner, rightTuner, bodyLayer, fretboards, fretMarkers, pickupDesigns] = await Promise.all([
       loader.loadAsync(encodeURI(modelPath)),
       Promise.all(variantLayerPromises),
       layerLoader.loadAsync(encodeURI(layerModelPaths.binding)),
       layerLoader.loadAsync(encodeURI(layerModelPaths.metalLogo)),
       tunerLoader.loadAsync(encodeURI(tunerModelPaths.left)),
       tunerLoader.loadAsync(encodeURI(tunerModelPaths.right)),
-      layerLoader.loadAsync(encodeURI(layerModelPaths.body))
+      layerLoader.loadAsync(encodeURI(layerModelPaths.body)),
+      Promise.all(Object.entries(fretboardVariantPaths).map(async ([name, path]) => ({ name, layer: await layerLoader.loadAsync(encodeURI(path)) }))),
+      Promise.all(Object.entries(fretMarkerPaths).map(async ([name, path]) => ({ name, layer: await layerLoader.loadAsync(encodeURI(path)) }))),
+      Promise.all(Object.entries(pickupDesignPaths).map(async ([name, path]) => ({ name, layer: await layerLoader.loadAsync(encodeURI(path)) })))
     ]);
     replaceTuners(mainModel, leftTuner.scene, rightTuner.scene);
+    installFretboardVariants(mainModel, fretboards, fretMarkers);
+    installPickupInserts(mainModel, pickupDesigns, meshRole);
     seatNeckAssembly(mainModel);
     replaceBody(mainModel, bodyLayer);
     variantLayers.forEach(({ variant, role, layer }) => {

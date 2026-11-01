@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260905-mobile-deploy-ready">
+  <link rel="stylesheet" href="styles.css?v=20261101-gray-start">
 </head>
 <body>
   <main class="app-shell">
@@ -113,7 +113,7 @@
         </section>
 
         <section class="config-block">
-          <div class="section-heading"><span>03</span><div><h2>Podstrunnica</h2><p>Materiał, markery i progi.</p></div></div>
+          <div class="section-heading"><span>03</span><div><h2>Podstrunnica</h2><p>Materiał, binding, markery i progi.</p></div></div>
           <fieldset>
             <legend>Materiał podstrunnicy</legend>
             <div class="choice-grid three">
@@ -122,10 +122,36 @@
               <label class="choice"><input type="radio" name="fretboard" value="Amarant" data-color="#65314d"><span><strong>Amarant</strong><small>Fioletowy akcent</small></span></label>
             </div>
           </fieldset>
-          <div class="field-row">
-            <fieldset><legend>Markery</legend><label class="static-choice selected"><span>Jak binding</span><small>Wspólny kolor markerów i bindingu</small></label><input type="hidden" name="markers" value="Jak binding"></fieldset>
+          <fieldset>
+            <legend>Rodzaj bindingu</legend>
+            <div class="choice-grid two">
+              <label class="choice"><input type="radio" name="bindingShape" value="Binding 1" checked><span><strong>Binding 1</strong><small>Ozdobny binding i kropki</small></span></label>
+              <label class="choice"><input type="radio" name="bindingShape" value="Binding 2"><span><strong>Binding 2</strong><small>Proste linie, z markerami lub bez</small></span></label>
+            </div>
+          </fieldset>
+          <fieldset id="bindingDotsOptions" hidden disabled>
+            <legend>Markery Bindingu 2</legend>
+            <div class="choice-grid two">
+              <label class="choice"><input type="radio" name="bindingDots" value="Czysty" checked><span><strong>Czysty</strong><small>Bez okrągłych markerów</small></span></label>
+              <label class="choice"><input type="radio" name="bindingDots" value="Okrągłe markery"><span><strong>Okrągłe markery</strong></span></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Marker na 12. progu</legend>
+            <div class="choice-grid two">
+              <label class="choice" hidden><input type="radio" name="fretMarker" value="Domyślny" disabled><span><strong>Bez dodatkowego markera</strong></span></label>
+              <label class="choice"><input type="radio" name="fretMarker" value="Marker 2" checked><span><strong>Weirdo</strong></span></label>
+              <label class="choice"><input type="radio" name="fretMarker" value="Triple dots"><span><strong>3 kółka</strong></span></label>
+              <label class="choice"><input type="radio" name="fretMarker" value="Marker 1"><span><strong>Diament</strong></span></label>
+              <label class="choice"><input type="radio" name="fretMarker" value="Marker 3"><span><strong>Sztylety</strong></span></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Kolor bindingu i markerów</legend>
+            <div class="swatch-options" id="bindingChoices"></div>
+          </fieldset>
+          <input type="hidden" name="markers" value="Jak binding">
             <fieldset><legend>Materiał progów</legend><div class="segmented"><label><input type="radio" name="fretMaterial" value="Stalowe" checked><span>Stalowe</span></label><label><input type="radio" name="fretMaterial" value="Niklowane"><span>Niklowane</span></label></div></fieldset>
-          </div>
           <fieldset><legend>Rozmiar progów</legend><select name="fretSize"><option value="Do ustalenia">Do wyboru po tabeli rozmiarów</option><option>Small</option><option>Medium</option><option>Jumbo</option></select></fieldset>
         </section>
 
@@ -149,22 +175,9 @@
           </fieldset>
         </section>
 
-        <section class="config-block">
-          <div class="section-heading"><span>05</span><div><h2>Kształt bindingu</h2><p>Opcja przygotowana pod kolejne warianty.</p></div></div>
-          <fieldset>
-            <legend>Kształt</legend>
-            <div class="choice-grid two">
-              <label class="choice recommended"><input type="radio" name="bindingShape" value="Standard WEIRDO" checked><span><strong>Standard WEIRDO</strong><small>Obecny kształt bindingu</small></span><i>Aktualne</i></label>
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend>Kolor bindingu i markerów</legend>
-            <div class="swatch-options" id="bindingChoices"></div>
-          </fieldset>
-        </section>
 
         <section class="config-block">
-          <div class="section-heading"><span>06</span><div><h2>Kolor osprzętu</h2><p>Mostek, klucze i pozostałe metalowe elementy kolorowane jako komplet.</p></div></div>
+          <div class="section-heading"><span>05</span><div><h2>Kolor osprzętu</h2><p>Mostek, klucze i pozostałe metalowe elementy kolorowane jako komplet.</p></div></div>
           <fieldset>
             <legend>Kolor</legend>
             <div class="choice-grid four compact">
@@ -186,18 +199,33 @@
         </section>
 
         <section class="config-block">
-          <div class="section-heading"><span>07</span><div><h2>Układ elektroniki</h2><p>Wybierz układ osprzętu i dopasowaną bryłę topu oraz boków.</p></div></div>
+          <div class="section-heading"><span>06</span><div><h2>Układ elektroniki</h2><p>Wybierz układ osprzętu i dopasowaną bryłę topu oraz boków.</p></div></div>
           <fieldset>
             <legend>Układ</legend>
             <div class="choice-grid two">
-              <label class="choice recommended"><input type="radio" name="electronicsLayout" value="Układ 1: 4 gałki + 2 switche" checked><span><strong>Układ 1</strong><small>4 gałki + 2 switche</small></span><i>Aktualne</i></label>
-              <label class="choice"><input type="radio" name="electronicsLayout" value="Układ 2: 1 pickup + 1 volume"><span><strong>Układ 2</strong><small>1 pickup + 1 volume</small></span></label>
+              <label class="choice recommended"><input type="radio" name="electronicsLayout" value="Układ 1: 4 gałki + 2 switche" checked><span><strong>2 humbuckers</strong><small>4 pots, 2 switches</small></span><i>Aktualne</i></label>
+              <label class="choice"><input type="radio" name="electronicsLayout" value="Układ 2: 1 pickup + 1 volume"><span><strong>1 humbucker</strong><small>2 switches / 1 Volume</small></span></label>
             </div>
+          </fieldset>
+          <fieldset id="electronicsWiringOptions">
+            <legend>Wariant elektroniki dla 2 humbuckerów</legend>
+            <div class="choice-grid">
+              <label class="choice"><input type="radio" name="electronicsWiring" value="Standard Weirdo" checked><span><strong>Weirdo</strong><small>Potencjometry: Volume Bridge, Volume Neck, Tone, Variable Coil Split Neck.</small><small>Switche: Pickup Selector i Coil split Bridge.</small></span></label>
+              <label class="choice"><input type="radio" name="electronicsWiring" value="Opcja 2"><span><strong>Classy</strong><small>Potencjometry: Volume Bridge, Volume Neck, Tone Bridge, Tone Neck.</small><small>Switche: Pickup selector, Off switch.</small></span></label>
+            </div>
+          </fieldset>
+          <fieldset id="singlePickupWiringOptions" hidden disabled>
+            <legend>Wariant elektroniki dla 1 humbuckera</legend>
+            <div class="choice-grid">
+              <label class="choice"><input type="radio" name="singlePickupWiring" value="Killer"><span><strong>Killer</strong><small>2 switches: 1. Kill switch, 2. Off switch.</small></span></label>
+              <label class="choice"><input type="radio" name="singlePickupWiring" value="Lauder" checked><span><strong>Lauder</strong><small>1 Volume</small></span></label>
+            </div>
+            <p>Wizualizacja wariantu Killer zostanie dodana później.</p>
           </fieldset>
         </section>
 
         <section class="config-block">
-          <div class="section-heading"><span>08</span><div><h2>Kolor główki</h2><p>Główka może być czarna albo dopasowana do topu lub boków.</p></div></div>
+          <div class="section-heading"><span>07</span><div><h2>Kolor główki</h2><p>Główka może być czarna albo dopasowana do topu lub boków.</p></div></div>
           <fieldset>
             <legend>Główka</legend>
             <div class="choice-grid three">
@@ -216,7 +244,7 @@
         </section>
 
         <section class="config-block">
-          <div class="section-heading"><span>09</span><div><h2>Pozostałe elementy</h2><p>Mostek, pickupy, siodełko i modyfikacje.</p></div></div>
+          <div class="section-heading"><span>08</span><div><h2>Pozostałe elementy</h2><p>Mostek, pickupy, siodełko i modyfikacje.</p></div></div>
           <fieldset>
             <legend>Pickupy</legend>
             <div class="choice-grid two">
@@ -224,7 +252,7 @@
               <label class="choice"><input type="radio" name="pickups" value="W niklowych puszkach"><span><strong>Niklowe puszki</strong><small>Pełna niklowa osłona</small></span></label>
               <label class="choice"><input type="radio" name="pickups" value="W chromowanych puszkach"><span><strong>Chromowane puszki</strong><small>Pełna chromowana osłona</small></span></label>
               <label class="choice"><input type="radio" name="pickups" value="W złotych puszkach"><span><strong>Złote puszki</strong><small>Złote wykończenie</small></span></label>
-              <label class="choice recommended"><input type="radio" name="pickups" value="Otwarta ramka" checked><span><strong>Otwarta ramka</strong><small>Chromowa ramka i czarny środek</small></span><i>Start</i></label>
+              <label class="choice recommended"><input type="radio" name="pickups" value="Otwarta ramka" checked><span><strong>Otwarta ramka</strong><small>Ramka w kolorze osprzętu i środek Weirdo</small></span><i>Start</i></label>
             </div>
           </fieldset>
           <div class="field-row">
@@ -240,18 +268,22 @@
             <fieldset class="pickup-custom-fieldset">
               <legend>Środek pickupów</legend>
               <div class="choice-grid four compact">
-                <label class="choice recommended"><input type="radio" name="pickupCenterColor" value="Czarny" checked><span><strong>Czarny</strong></span><i>Start</i></label>
+                <label class="choice recommended"><input type="radio" name="pickupCenterColor" value="Weirdo" checked><span><strong>Weirdo</strong></span><i>Start</i></label>
+                <label class="choice"><input type="radio" name="pickupCenterColor" value="Czarny"><span><strong>Czarny</strong></span></label>
                 <label class="choice"><input type="radio" name="pickupCenterColor" value="Chrom"><span><strong>Chrom</strong></span></label>
                 <label class="choice"><input type="radio" name="pickupCenterColor" value="Nikiel"><span><strong>Nikiel</strong></span></label>
                 <label class="choice"><input type="radio" name="pickupCenterColor" value="Złoty"><span><strong>Złoty</strong></span></label>
               </div>
             </fieldset>
           </div>
-          <fieldset>
-            <legend>Magnesy pickupów</legend>
-            <label class="static-choice selected"><span>Szare</span><small>Stały neutralny kolor</small></label>
-            <input type="hidden" name="pickupMagnetColor" value="Szare">
+          <fieldset id="pickupDesignOptions" hidden>
+            <legend>Grafika środka Weirdo</legend>
+            <div class="choice-grid two">
+              <label class="choice"><input type="radio" name="pickupDesign" value="Gładki" checked><span><strong>Gładki</strong><small>W kolorze bindingu</small></span></label>
+              <label class="choice"><input type="radio" name="pickupDesign" value="Weirdo 1"><span><strong>Weirdo 1</strong><small>Czarny ornament, wypełnienie w kolorze bindingu</small></span></label>
+            </div>
           </fieldset>
+          <input type="hidden" name="pickupMagnetColor" value="Szare">
           <div class="field-row">
             <fieldset><legend>Mostek</legend><select name="bridge"><option selected>Tune-o-matic Gotoh</option><option>Evertune</option></select></fieldset>
             <fieldset><legend>Klucze</legend><select name="tuners"><option selected>Gotoh SG381 MG</option><option>Gotoh SG381 MG-T</option><option>Gotoh SG 381</option></select></fieldset>
@@ -262,11 +294,11 @@
             <fieldset><legend>Menzura</legend><label class="static-choice selected"><span>25.5 cala</span><small>Aktualnie dostępna opcja</small></label><input type="hidden" name="scale" value="25.5 cala"></fieldset>
             <fieldset><legend>Liczba progów</legend><label class="static-choice selected"><span>24 progi</span><small>Aktualnie dostępna opcja</small></label><input type="hidden" name="fretCount" value="24"></fieldset>
           </div>
-          <fieldset><legend>Dodatkowe modyfikacje</legend><textarea name="modifications" rows="5" placeholder="Opisz niestandardowe rozwiązania, które mamy uwzględnić..."></textarea></fieldset>
+          <fieldset><legend>Dodatkowe modyfikacje</legend><textarea name="modifications" rows="5" placeholder="Opisz niestandardowe rozwiązania, które mam uwzględnić..."></textarea></fieldset>
         </section>
 
         <section class="config-block summary-block">
-          <div class="section-heading"><span>10</span><div><h2>Podsumowanie</h2><p>Aktualny zestaw wyborów do dalszej wyceny.</p></div></div>
+          <div class="section-heading"><span>09</span><div><h2>Podsumowanie</h2><p>Aktualny zestaw wyborów do dalszej wyceny.</p></div></div>
           <div class="summary-list" id="summaryList"></div>
           <div class="contact-grid">
             <label>Nazwa modelu<input name="modelName" type="text" placeholder="np. Purple Storm" maxlength="120"></label>
@@ -286,7 +318,7 @@
     </section>
   </main>
   <div class="toast" id="toast" role="status"></div>
-  <script src="app.js?v=20261030-pearl-chamfers"></script>
-  <script type="module" src="viewer3d.bundle.js?v=20261031-head-logo-pigment"></script>
+  <script src="app.js?v=20261101-vivid-red"></script>
+  <script type="module" src="viewer3d.bundle.js?v=20261101-maple-red-deeper"></script>
 </body>
 </html>

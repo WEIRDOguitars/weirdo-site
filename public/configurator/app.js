@@ -8,6 +8,39 @@ const zoomSlider = document.querySelector("#zoomSlider");
 const backgroundSelect = document.querySelector("#backgroundSelect");
 const modelImportInput = document.querySelector("#modelImportInput");
 let viewer3dReady = false;
+window.weirdoActiveElements = new Set();
+const chosenFields = new Set();
+
+function refreshChoiceState() {
+  form.querySelectorAll(".choice, .swatch-label, .segmented label").forEach(label => {
+    const input = label.querySelector("input[name]");
+    label.classList.toggle("unselected-preview", Boolean(input && !chosenFields.has(input.name)));
+  });
+  form.querySelectorAll(".finish-color").forEach(button => {
+    button.classList.toggle("unselected-preview", !chosenFields.has(button.dataset.target));
+  });
+}
+
+function activatePreviewChoice(name) {
+  if (!name) return;
+  chosenFields.add(name);
+  for (const [element, fields] of Object.entries(window.weirdoPreviewFields || {})) {
+    if (fields.includes(name)) window.weirdoActiveElements.add(element);
+  }
+  if (name === "hardwareColor") {
+    for (const element of ["knobs", "pickupFrame", "pickupCenter"]) window.weirdoActiveElements.add(element);
+    for (const field of ["knobColor", "pickups", "pickupFrameColor", "pickupCenterColor"]) chosenFields.add(field);
+  }
+  refreshChoiceState();
+}
+
+form.addEventListener("click", event => {
+  const input = event.target.closest("label")?.querySelector("input[name]");
+  const button = event.target.closest(".finish-color");
+  activatePreviewChoice(input?.name || button?.dataset.target || event.target.name);
+  window.weirdoViewer3d?.rerender?.();
+});
+form.addEventListener("input", event => activatePreviewChoice(event.target.name));
 let wheelZoomTarget = null;
 let wheelZoomFrame = 0;
 const activePreviewPointers = new Map();
@@ -26,16 +59,21 @@ const defaults = {
   fretboard: "Heban",
   bodyWood: "Mahoń sapeli",
   bodyFinish: "Olejowosk",
-  bindingShape: "Standard WEIRDO",
+  bindingShape: "Binding 1",
+  bindingDots: "Czysty",
+  fretMarker: "Marker 2",
   binding: "Perłowy",
   hardwareColor: "Chrom",
   knobColor: "Chrom",
   electronicsLayout: "Układ 1: 4 gałki + 2 switche",
+  electronicsWiring: "Standard Weirdo",
+  singlePickupWiring: "Lauder",
   headMode: "Czarna",
   headFinish: "Gloss",
   pickups: "Otwarta ramka",
   pickupFrameColor: "Chrom",
-  pickupCenterColor: "Czarny",
+  pickupCenterColor: "Weirdo",
+  pickupDesign: "Gładki",
   pickupMagnetColor: "Szare",
   bridge: "Tune-o-matic Gotoh",
   tuners: "Gotoh SG381 MG",
@@ -68,7 +106,8 @@ const burstColors = [
   ["Foggy", "burst:foggy", "linear-gradient(135deg, #060606 0%, #565b5f 52%, #c1b9a7 100%)"],
   ["Żółty", "#d6a824"],
   ["Zielony", "#24563b"],
-  ["Niebieski", "#1c5fa8"]
+  ["Niebieski", "#1c5fa8"],
+  ["Czerwony", "#c41420"]
 ];
 
 const darkWoodColors = finishColors.filter(([name]) => !["Szary", "Biały", "Kremowy"].includes(name));
@@ -769,19 +808,22 @@ function drawConfiguredFront() {
   ctx.restore();
 }
 
-function drawCanvas(force = false) {
-  if (!force && viewer3dReady && !stageWrap?.classList.contains("viewer-3d-fallback")) return;
-
-  const degrees = Number(frameSlider.value) || 0;
-  const index = Math.round(degrees / 45) % 8;
-  if (index === 0) drawConfiguredFront();
-  else drawFrameOnly(index);
-
-  const zoom = 1.18 + Number(zoomSlider.value) / 160;
-  canvas.style.transform = `scale(${zoom})`;
+function drawCanvas() {
+  // Legacy callers must not render the obsolete layered preview during 3D loading.
 }
 
 function updateSummary() {
+  refreshChoiceState();
+  const wiringOptions = document.querySelector("#electronicsWiringOptions");
+  const showWiring = fieldValue("electronicsLayout") === defaults.electronicsLayout;
+  wiringOptions.hidden = !showWiring;
+  wiringOptions.disabled = !showWiring;
+  const singleWiringOptions = document.querySelector("#singlePickupWiringOptions");
+  singleWiringOptions.hidden = showWiring;
+  singleWiringOptions.disabled = showWiring;
+  const activeWiring = (showWiring ? wiringOptions : singleWiringOptions).querySelector('input:checked').closest("label");
+  document.querySelector("#pickupDesignOptions").hidden =
+    fieldValue("pickups") !== "Otwarta ramka" || fieldValue("pickupCenterColor") !== "Weirdo";
   const data = new FormData(form);
   const topColor = selectedColorName(data.get("topColor"), data.get("topWood"));
   const sideColor = selectedColorName(data.get("sideColor"), data.get("sideWood"));
@@ -792,14 +834,18 @@ function updateSummary() {
     ["Podstrunnica", `${data.get("fretboard")} / markery ${data.get("binding")} / progi ${data.get("fretMaterial")}`],
     ["Korpus", `${data.get("bodyWood")} / ${data.get("bodyFinish")}`],
     ["Kształt bindingu", data.get("bindingShape")],
+    ...(data.get("bindingShape") === "Binding 2" ? [["Markery Bindingu 2", data.get("bindingDots") || "Czysty"]] : []),
+    ["Marker na 12. progu", form.querySelector('input[name="fretMarker"]:checked').closest("label").querySelector("strong").textContent],
     ["Kolor bindingu i markerów", data.get("binding")],
     ["Kolor osprzętu", data.get("hardwareColor")],
     ["Kolor gałek", data.get("knobColor")],
-    ["Układ elektroniki", data.get("electronicsLayout")],
+    ["Układ elektroniki", form.querySelector('input[name="electronicsLayout"]:checked').closest("label").querySelector("strong").textContent],
+    ["Wariant elektroniki", activeWiring.querySelector("strong").textContent],
+    ["Funkcje elektroniki", Array.from(activeWiring.querySelectorAll("small")).map(item => item.textContent).join(" ")],
     ["Główka", `${data.get("headMode")} / ${data.get("headFinish")}`],
     ["Pickupy", data.get("pickups")],
     ["Ramka pickupów", data.get("pickupFrameColor")],
-    ["Środek pickupów", data.get("pickupCenterColor")],
+    ["Środek pickupów", data.get("pickupCenterColor") === "Weirdo" ? "Weirdo / " + (data.get("pickupDesign") || defaults.pickupDesign) : data.get("pickupCenterColor")],
     ["Magnesy pickupów", data.get("pickupMagnetColor")],
     ["Mostek", data.get("bridge")],
     ["Klucze", data.get("tuners")],
@@ -837,6 +883,7 @@ function getFormSelections() {
     if (key === "website") continue;
     selections[key] = String(value);
   }
+  selections.previewState = JSON.stringify({ elements: [...window.weirdoActiveElements], fields: [...chosenFields] });
   return selections;
 }
 
@@ -849,20 +896,14 @@ function captureConfigurationImage() {
   });
   if (captured) return captured;
 
-  const previousFrame = frameSlider.value;
-  const previousZoom = zoomSlider.value;
-  frameSlider.value = "0";
-  zoomSlider.value = "0";
-  drawCanvas(true);
-  const image = canvas.toDataURL("image/jpeg", .9);
-  frameSlider.value = previousFrame;
-  zoomSlider.value = previousZoom;
-  drawCanvas(true);
-  return image;
+  throw new Error("Poczekaj na pełne wczytanie modelu 3D przed wysłaniem konfiguracji.");
 }
 
 function resetForm() {
+  window.weirdoActiveElements.clear();
+  chosenFields.clear();
   form.reset();
+  syncFretMarkerOptions();
   document.querySelector("#topColor").value = defaults.topColor;
   document.querySelector("#sideColor").value = defaults.sideColor;
   applyPickupPreset(defaults.pickups);
@@ -1055,12 +1096,27 @@ function applyImportedSelections(selections) {
   if (!selections || typeof selections !== "object") {
     throw new Error("Plik JSON nie zawiera konfiguracji do wczytania.");
   }
+  let previewState = null;
+  try { previewState = JSON.parse(selections.previewState || "null"); } catch {}
+  window.weirdoActiveElements = new Set(Array.isArray(previewState?.elements)
+    ? previewState.elements.filter(value => Object.hasOwn(window.weirdoPreviewFields || {}, value))
+    : Object.keys(window.weirdoPreviewFields || {}));
+  chosenFields.clear();
+  const restoredFields = Array.isArray(previewState?.fields) ? previewState.fields : Object.keys(selections);
+  restoredFields.forEach(name => chosenFields.add(name));
 
   const deferred = new Set(["topColor", "sideColor", "pickupFrameColor", "pickupCenterColor"]);
+  setFormValue("pickupDesign", defaults.pickupDesign);
+  setFormValue("electronicsWiring", defaults.electronicsWiring);
+  setFormValue("singlePickupWiring", defaults.singlePickupWiring);
+  setFormValue("bindingShape", defaults.bindingShape);
+  setFormValue("bindingDots", defaults.bindingDots);
+  if (!Object.hasOwn(selections, "fretMarker")) setFormValue("fretMarker", defaults.fretMarker);
   for (const [name, value] of Object.entries(selections)) {
     if (!deferred.has(name)) setFormValue(name, value);
   }
 
+  syncFretMarkerOptions();
   renderPalettes();
   for (const name of deferred) {
     if (Object.hasOwn(selections, name)) setFormValue(name, selections[name]);
@@ -1085,7 +1141,7 @@ function applyHardwarePreset(value) {
   setRadioValue("knobColor", value);
   setRadioValue("pickups", "Otwarta ramka");
   setRadioValue("pickupFrameColor", value);
-  setRadioValue("pickupCenterColor", "Czarny");
+  setRadioValue("pickupCenterColor", "Weirdo");
   setPickupCustomLocked(false);
 }
 
@@ -1095,7 +1151,7 @@ function pickupPresetValues(value) {
     "W niklowych puszkach": { frame: "Nikiel", center: "Nikiel", locked: true },
     "W chromowanych puszkach": { frame: "Chrom", center: "Chrom", locked: true },
     "W złotych puszkach": { frame: "Złoty", center: "Złoty", locked: true },
-    "Otwarta ramka": { frame: "Chrom", center: "Czarny", locked: false }
+    "Otwarta ramka": { frame: fieldValue("hardwareColor") || "Chrom", center: "Weirdo", locked: false }
   }[value] || { locked: false };
 }
 
@@ -1113,8 +1169,26 @@ function applyPickupPreset(value = fieldValue("pickups")) {
   setPickupCustomLocked(preset.locked);
 }
 
+function syncFretMarkerOptions() {
+  const allowNoMarker = fieldValue("bindingShape") === "Binding 2";
+  const dotsOptions = document.querySelector("#bindingDotsOptions");
+  dotsOptions.hidden = !allowNoMarker;
+  dotsOptions.disabled = !allowNoMarker;
+  const tripleDots = form.querySelector('input[name="fretMarker"][value="Triple dots"]');
+  if (allowNoMarker && tripleDots.checked) setFormValue("fretMarker", defaults.fretMarker);
+  tripleDots.disabled = allowNoMarker;
+  tripleDots.closest("label").hidden = allowNoMarker;
+  const noMarker = form.querySelector('input[name="fretMarker"][value="Domyślny"]');
+  noMarker.closest("label").querySelector("strong").textContent =
+    allowNoMarker && fieldValue("bindingDots") === "Okrągłe markery" ? "3 kółka" : "Bez dodatkowego markera";
+  if (!allowNoMarker && noMarker.checked) setFormValue("fretMarker", defaults.fretMarker);
+  noMarker.disabled = !allowNoMarker;
+  noMarker.closest("label").hidden = !allowNoMarker;
+}
+
 renderPalettes();
 applyPickupPreset();
+syncFretMarkerOptions();
 
 document.addEventListener("click", event => {
   const colorButton = event.target.closest(".finish-color");
@@ -1132,11 +1206,16 @@ document.addEventListener("click", event => {
 });
 
 form.addEventListener("input", () => {
+  syncFretMarkerOptions();
   if (!viewer3dReady || stageWrap?.classList.contains("viewer-3d-fallback")) drawCanvas();
   updateSummary();
 });
 
 form.addEventListener("change", event => {
+  if (event.target?.name === "bindingShape" || event.target?.name === "fretMarker") {
+    syncFretMarkerOptions();
+    window.weirdoViewer3d?.rerender?.();
+  }
   if (event.target?.name === "topWood" || event.target?.name === "sideWood") {
     renderPalettes();
   }
@@ -1182,19 +1261,12 @@ window.addEventListener("weirdo:viewer3d-ready", () => {
 });
 
 window.addEventListener("weirdo:viewer3d-failed", event => {
-  stageWrap?.classList.remove("viewer-3d-ready");
-  stageWrap?.classList.add("viewer-3d-fallback");
-  loading.hidden = true;
-  drawCanvas(true);
-  console.warn("PodglÄ…d 3D nie wystartowaĹ‚, pokazujÄ™ fallback 2D.", event.detail?.error);
+  viewer3dReady = false;
+  stageWrap?.classList.remove("viewer-3d-ready", "viewer-3d-fallback");
+  loading.hidden = false;
+  loading.textContent = "Nie udało się wczytać modelu 3D. Odśwież stronę i spróbuj ponownie.";
+  console.error("Nie udało się uruchomić podglądu 3D.", event.detail?.error);
 });
-
-window.setTimeout(() => {
-  if (viewer3dReady) return;
-  stageWrap?.classList.add("viewer-3d-fallback");
-  loading.hidden = true;
-  drawCanvas(true);
-}, 8000);
 
 form.addEventListener("submit", async event => {
   event.preventDefault();
@@ -1235,10 +1307,9 @@ form.addEventListener("submit", async event => {
   }
 });
 
-Promise.all([loadImages(), loadInventory()]).then(([, inventory]) => {
+loadInventory().then(inventory => {
   applyInventory(inventory);
-  drawCanvas();
   updateSummary();
 }).catch(error => {
-  loading.textContent = error.message || "Nie udało się wczytać warstw wizualizacji.";
+  console.warn("Nie udało się wczytać dostępności opcji.", error);
 });

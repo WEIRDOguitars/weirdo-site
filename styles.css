@@ -1244,3 +1244,16 @@ textarea {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+.choice[hidden] {
+  display: none;
+}
+
+.choice.unselected-preview,
+.swatch-label.unselected-preview,
+.finish-color.unselected-preview,
+.segmented .unselected-preview input:checked + span {
+  border-color: var(--line) !important;
+  background: var(--card) !important;
+  box-shadow: none !important;
+}
+.unselected-preview i { display: none; }
