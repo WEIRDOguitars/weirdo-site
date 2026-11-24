@@ -15,7 +15,7 @@
       window.addEventListener("weirdo:viewer3d-failed", () => reject(new Error("Nie udało się uruchomić modelu 3D.")), { once: true });
       const script = document.createElement("script");
       script.type = "module";
-      script.src = "viewer3d.bundle.js?v=20261101-maple-red-deeper";
+      script.src = "viewer3d.bundle.js?v=20261124-body-wall-grain";
       script.onerror = () => reject(new Error("Nie udało się pobrać podglądu. Odśwież stronę."));
       document.body.append(script);
     });

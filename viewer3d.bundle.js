@@ -38482,6 +38482,38 @@ void main() {
     mesh.geometry.setAttribute("uv", new BufferAttribute(uv, 2));
     mesh.geometry.attributes.uv.needsUpdate = true;
   }
+  function applyBodyWallUv(mesh, box) {
+    if (!box) return;
+    if (mesh.geometry.index) mesh.geometry = mesh.geometry.toNonIndexed();
+    const position = mesh.geometry.attributes.position;
+    const uv = mesh.geometry.attributes.uv;
+    const center = box.getCenter(new Vector3());
+    const size = box.getSize(new Vector3());
+    const radiusX = Math.max(size.x / 2, 1e-4);
+    const radiusY = Math.max(size.y / 2, 1e-4);
+    const perimeter = Math.PI * (3 * (radiusX + radiusY) - Math.sqrt((3 * radiusX + radiusY) * (radiusX + 3 * radiusY)));
+    const points = [new Vector3(), new Vector3(), new Vector3()];
+    const edge = new Vector3();
+    const normal = new Vector3();
+    for (let i2 = 0; i2 < position.count; i2 += 3) {
+      points.forEach((point, corner) => {
+        point.fromBufferAttribute(position, i2 + corner);
+        mesh.localToWorld(point);
+      });
+      normal.subVectors(points[1], points[0]).cross(edge.subVectors(points[2], points[0])).normalize();
+      if (Math.abs(normal.z) >= 0.7) continue;
+      const turns = points.map((point) => Math.atan2((point.y - center.y) / radiusY, (point.x - center.x) / radiusX) / (2 * Math.PI) + 0.5);
+      if (Math.max(...turns) - Math.min(...turns) > 0.5) {
+        turns.forEach((turn, corner) => {
+          if (turn < 0.5) turns[corner] += 1;
+        });
+      }
+      points.forEach((point, corner) => {
+        uv.setXY(i2 + corner, (point.z - box.min.z) / Math.max(size.x, 1e-4), turns[corner] * perimeter / Math.max(size.y, 1e-4));
+      });
+    }
+    uv.needsUpdate = true;
+  }
   function roleBounds(role, predicate = null) {
     const box = new Box3();
     let found = false;
@@ -38668,6 +38700,7 @@ void main() {
       if (!["top", "sides", "head", "body"].includes(mesh.userData.role)) return;
       const referenceBox = mesh.userData.role === "top" ? topTextureReference : bounds[mesh.userData.role];
       applyPlanarWoodUv(mesh, referenceBox);
+      if (mesh.userData.role === "body") applyBodyWallUv(mesh, referenceBox);
     });
   }
   function materialName(mesh) {

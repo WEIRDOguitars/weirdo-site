@@ -593,6 +593,39 @@ function applyPlanarWoodUv(mesh, referenceBox = null) {
   mesh.geometry.attributes.uv.needsUpdate = true;
 }
 
+function applyBodyWallUv(mesh, box) {
+  if (!box) return;
+  // Separate triangle UVs so the wrap seam cannot stretch across the whole texture.
+  if (mesh.geometry.index) mesh.geometry = mesh.geometry.toNonIndexed();
+  const position = mesh.geometry.attributes.position;
+  const uv = mesh.geometry.attributes.uv;
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const radiusX = Math.max(size.x / 2, .0001);
+  const radiusY = Math.max(size.y / 2, .0001);
+  const perimeter = Math.PI * (3 * (radiusX + radiusY) - Math.sqrt((3 * radiusX + radiusY) * (radiusX + 3 * radiusY)));
+  const points = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  const edge = new THREE.Vector3();
+  const normal = new THREE.Vector3();
+  for (let i = 0; i < position.count; i += 3) {
+    points.forEach((point, corner) => {
+      point.fromBufferAttribute(position, i + corner);
+      mesh.localToWorld(point);
+    });
+    normal.subVectors(points[1], points[0]).cross(edge.subVectors(points[2], points[0])).normalize();
+    if (Math.abs(normal.z) >= .7) continue;
+    const turns = points.map(point => Math.atan2((point.y - center.y) / radiusY, (point.x - center.x) / radiusX) / (2 * Math.PI) + .5);
+    if (Math.max(...turns) - Math.min(...turns) > .5) {
+      turns.forEach((turn, corner) => { if (turn < .5) turns[corner] += 1; });
+    }
+    points.forEach((point, corner) => {
+      // Grain runs around the rim; depth samples a real strip rather than one pixel.
+      uv.setXY(i + corner, (point.z - box.min.z) / Math.max(size.x, .0001), turns[corner] * perimeter / Math.max(size.y, .0001));
+    });
+  }
+  uv.needsUpdate = true;
+}
+
 function roleBounds(role, predicate = null) {
   const box = new THREE.Box3();
   let found = false;
@@ -804,6 +837,7 @@ function applyWoodUvs() {
     if (!["top", "sides", "head", "body"].includes(mesh.userData.role)) return;
     const referenceBox = mesh.userData.role === "top" ? topTextureReference : bounds[mesh.userData.role];
     applyPlanarWoodUv(mesh, referenceBox);
+    if (mesh.userData.role === "body") applyBodyWallUv(mesh, referenceBox);
   });
 }
 
