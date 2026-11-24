@@ -155,6 +155,8 @@ let baseYaw = 0;
 let fittedHeight = 100;
 let fixedViewHeight = null;
 let zoomFocusPoint = new THREE.Vector3(0, 0, 0);
+let verticalPan = 0;
+let panModelBounds = null;
 let viewFrame = 0;
 let renderFrame = 0;
 
@@ -175,7 +177,12 @@ globalThis.weirdoViewer3d = {
     }));
   },
   rerender: applyMaterials,
-  captureImage: captureViewerImage
+  captureImage: captureViewerImage,
+  panByPixels: panPreviewByPixels,
+  resetPan() {
+    verticalPan = 0;
+    requestViewUpdate();
+  }
 };
 
 function updateViewerDebug(reason = "render") {
@@ -183,6 +190,7 @@ function updateViewerDebug(reason = "render") {
   container.dataset.fittedHeight = String(Math.round(fittedHeight * 1000) / 1000);
   container.dataset.fixedViewHeight = String(Math.round((fixedViewHeight || 0) * 1000) / 1000);
   container.dataset.cameraZoom = String(Math.round(camera.zoom * 1000) / 1000);
+  container.dataset.verticalPan = String(Math.round(verticalPan * 1000) / 1000);
 }
 
 function captureViewerImage(options = {}) {
@@ -190,6 +198,7 @@ function captureViewerImage(options = {}) {
 
   const previousFrame = frameSlider.value;
   const previousZoom = zoomSlider.value;
+  const previousPan = verticalPan;
   const frame = options.frame ?? 0;
   const zoom = options.zoom ?? 0;
   const type = options.type || "image/jpeg";
@@ -197,11 +206,13 @@ function captureViewerImage(options = {}) {
 
   frameSlider.value = String(frame);
   zoomSlider.value = String(zoom);
+  verticalPan = 0;
   updateView();
   renderNow();
   const image = renderer.domElement.toDataURL(type, quality);
   frameSlider.value = previousFrame;
   zoomSlider.value = previousZoom;
+  verticalPan = previousPan;
   updateView();
   return image;
 }
@@ -1485,6 +1496,8 @@ function fitCamera() {
     found = true;
   });
   if (!found) box.setFromObject(model);
+  pivot.updateWorldMatrix(true, false);
+  panModelBounds = box.clone().applyMatrix4(pivot.matrixWorld.clone().invert());
   const size = box.getSize(new THREE.Vector3());
   fittedHeight = Math.max(size.y, size.x * 1.25, 1);
   if (!fixedViewHeight) fixedViewHeight = fittedHeight;
@@ -1814,6 +1827,44 @@ function updateMetalLogoVisibility(yawRadians) {
   });
 }
 
+function panPreviewByPixels(deltaY) {
+  const zoomValue = Number(zoomSlider.value || 0);
+  if (!model || zoomValue <= 0 || !Number.isFinite(deltaY)) return;
+  const height = Math.max(container.getBoundingClientRect().height, 1);
+  const worldPerPixel = (camera.top - camera.bottom) / camera.zoom / height;
+  verticalPan -= deltaY * worldPerPixel;
+  requestViewUpdate();
+}
+
+function clampVerticalPan(zoomValue, focusAmount) {
+  if (!panModelBounds || zoomValue <= 0) return 0;
+  camera.updateWorldMatrix(true, false);
+  const point = new THREE.Vector3();
+  let minY = Infinity;
+  let maxY = -Infinity;
+  // Project the cached instrument bounds, not every vertex, on each interaction.
+  for (const x of [panModelBounds.min.x, panModelBounds.max.x]) {
+    for (const y of [panModelBounds.min.y, panModelBounds.max.y]) {
+      for (const z of [panModelBounds.min.z, panModelBounds.max.z]) {
+        point.set(x, y, z).applyEuler(pivot.rotation);
+        point.x += pivot.position.x;
+        point.y -= zoomFocusPoint.y * focusAmount;
+        point.applyMatrix4(camera.matrixWorldInverse);
+        minY = Math.min(minY, point.y);
+        maxY = Math.max(maxY, point.y);
+      }
+    }
+  }
+  const visibleHeight = (camera.top - camera.bottom) / camera.zoom;
+  const padding = visibleHeight * .05;
+  const bottom = camera.bottom / camera.zoom + padding;
+  const top = camera.top / camera.zoom - padding;
+  const alignTop = top - maxY;
+  const alignBottom = bottom - minY;
+  const cameraUpY = camera.matrixWorldInverse.elements[5];
+  return THREE.MathUtils.clamp(verticalPan, Math.min(alignTop, alignBottom) / cameraUpY, Math.max(alignTop, alignBottom) / cameraUpY);
+}
+
 function updateView() {
   viewFrame = 0;
   const degrees = Number(frameSlider.value || 0);
@@ -1831,9 +1882,11 @@ function updateView() {
   const zoom = 1.24 + zoomValue / 62;
   const focusAmount = THREE.MathUtils.smoothstep(zoomValue / 100, 0, 1);
   pivot.position.x = -zoomFocusPoint.x * focusAmount;
-  pivot.position.y = -zoomFocusPoint.y * focusAmount;
   camera.zoom = zoom;
+  verticalPan = clampVerticalPan(zoomValue, focusAmount);
+  pivot.position.y = -zoomFocusPoint.y * focusAmount + verticalPan;
   camera.updateProjectionMatrix();
+  updateViewerDebug("view");
   requestRender();
 }
 

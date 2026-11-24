@@ -909,6 +909,7 @@ function resetForm() {
   applyPickupPreset(defaults.pickups);
   frameSlider.value = "0";
   zoomSlider.value = "0";
+  window.weirdoViewer3d?.resetPan?.();
   if (backgroundSelect) backgroundSelect.value = "studio";
   applyPreviewBackground();
   renderPalettes();
@@ -1003,7 +1004,11 @@ function startPreviewGesture() {
       distance: previewPointerDistance(),
       zoom: Number(zoomSlider.value || 0),
       frame: Number(frameSlider.value || 0),
-      centerX: (points[0].x + points[1].x) / 2
+      centerX: (points[0].x + points[1].x) / 2,
+      centerY: (points[0].y + points[1].y) / 2,
+      lockDirection: Number(zoomSlider.value || 0) > 0,
+      axis: null,
+      lastY: (points[0].y + points[1].y) / 2
     };
     return;
   }
@@ -1012,12 +1017,26 @@ function startPreviewGesture() {
     previewGesture = {
       type: "drag",
       x: points[0].x,
+      y: points[0].y,
+      lockDirection: Number(zoomSlider.value || 0) > 0,
+      axis: null,
+      lastY: points[0].y,
       frame: Number(frameSlider.value || 0)
     };
   }
 }
 
+function previewDragAxis(gesture, dx, dy) {
+  if (!gesture.lockDirection) return "horizontal";
+  // Ignore small hand movements before choosing one direction for this gesture.
+  if (!gesture.axis && Math.max(Math.abs(dx), Math.abs(dy)) >= 6) {
+    gesture.axis = Math.abs(dx) >= Math.abs(dy) ? "horizontal" : "vertical";
+  }
+  return gesture.axis;
+}
+
 function handlePreviewPointerDown(event) {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
   if (!stageWrap?.contains(event.target)) return;
   if (event.target.closest(".viewer-controls, input, select, button, label")) return;
 
@@ -1038,18 +1057,29 @@ function handlePreviewPointerMove(event) {
     const nextZoom = previewGesture.zoom + (distance - previewGesture.distance) * .28;
     const points = Array.from(activePreviewPointers.values());
     const centerX = (points[0].x + points[1].x) / 2;
+    const centerY = (points[0].y + points[1].y) / 2;
+    const axis = previewDragAxis(previewGesture, centerX - previewGesture.centerX, centerY - previewGesture.centerY);
+    if (axis === "vertical") {
+      window.weirdoViewer3d?.panByPixels?.(centerY - previewGesture.lastY);
+      previewGesture.lastY = centerY;
+    }
     const nextFrame = previewGesture.frame + (centerX - previewGesture.centerX) * .18;
     queuePreviewGestureValues({
       zoom: nextZoom,
-      frame: ((nextFrame % 360) + 360) % 360
+      frame: axis === "horizontal" ? ((nextFrame % 360) + 360) % 360 : null
     });
     return;
   }
 
   if (activePreviewPointers.size === 1 && previewGesture.type === "drag") {
     const point = activePreviewPointers.get(event.pointerId);
+    const axis = previewDragAxis(previewGesture, point.x - previewGesture.x, point.y - previewGesture.y);
+    if (axis === "vertical") {
+      window.weirdoViewer3d?.panByPixels?.(point.y - previewGesture.lastY);
+      previewGesture.lastY = point.y;
+    }
     const nextFrame = previewGesture.frame + (point.x - previewGesture.x) * .32;
-    queuePreviewGestureValues({ frame: ((nextFrame % 360) + 360) % 360 });
+    if (axis === "horizontal") queuePreviewGestureValues({ frame: ((nextFrame % 360) + 360) % 360 });
   }
 }
 
