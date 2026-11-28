@@ -6,6 +6,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { installFretboardVariants } from "./fretboard-variants.js";
 import { installPickupInserts } from "./pickup-inserts.js";
 import { elementFields, isElementActive } from "./preview-selection.js";
+import { projectAnnotations } from "./annotation-anchors.js";
 
 window.weirdoPreviewFields = elementFields;
 
@@ -67,8 +68,7 @@ const texturePaths = {
   bodyAsh: `${assetBase}/tekstury/runtime/body-ash.png`,
   paintCreamWhite: `${assetBase}/tekstury/runtime/paint-cream-white.png`,
   paintPearlWhite: `${assetBase}/tekstury/runtime/paint-pearl-white.png`,
-  paintMetallicBlack: `${assetBase}/tekstury/runtime/paint-metallic-black.png`,
-  paintCandyAppleRed: `${assetBase}/tekstury/runtime/paint-candy-apple-red.png`
+  paintMetallicBlack: `${assetBase}/tekstury/runtime/paint-metallic-black.png`
 };
 
 const metalFinishes = {
@@ -177,6 +177,10 @@ globalThis.weirdoViewer3d = {
     }));
   },
   rerender: applyMaterials,
+  annotationAnchors() {
+    if (!model || viewFrame || renderFrame) return null;
+    return projectAnnotations({ meshes, pivot, camera, degrees: Number(frameSlider.value || 0), zoom: Number(zoomSlider.value || 0) });
+  },
   captureImage: captureViewerImage,
   panByPixels: panPreviewByPixels,
   resetPan() {
@@ -1003,7 +1007,7 @@ function glossCoatMaterial(role) {
 
 function resolveSolidPaintColor(color) {
   if (color === "natural") return "#d7b37a";
-  if (color === "paint:candy-apple-red") return "#b51616";
+  if (color === "paint:gold") return "#b39448";
   if (color === "paint:cream-white") return "#d8c39a";
   if (color === "paint:pearl-white") return "#f2eee6";
   if (color === "paint:metallic-black") return "#101010";
@@ -1014,14 +1018,33 @@ function paintTextureKeyForColor(color) {
   return {
     "paint:cream-white": "paintCreamWhite",
     "paint:pearl-white": "paintPearlWhite",
-    "paint:metallic-black": "paintMetallicBlack",
-    "paint:candy-apple-red": "paintCandyAppleRed"
+    "paint:metallic-black": "paintMetallicBlack"
   }[color] || null;
+}
+
+function paintGoldBase(context, width, height) {
+  // Fine bronze-powder pigment: deterministic, low-contrast grain, not glitter.
+  const pixels = context.createImageData(width, height);
+  let seed = 381;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      const grain = (seed / 4294967296 - .5) * 15;
+      const sheen = 8 * Math.cos((x / width * .8 + y / height * .25) * Math.PI);
+      const i = (y * width + x) * 4;
+      pixels.data[i] = 179 + grain + sheen;
+      pixels.data[i + 1] = 148 + grain * .85 + sheen;
+      pixels.data[i + 2] = 72 + grain * .5 + sheen * .55;
+      pixels.data[i + 3] = 255;
+    }
+  }
+  context.putImageData(pixels, 0, 0);
 }
 
 function paintTextureForColor(color, finish = "Mat", area = "top") {
   const sourceKey = paintTextureKeyForColor(color);
-  if (finish !== "Gloss") return sourceKey ? textureMap(sourceKey, 1, 1) : null;
+  const gold = color === "paint:gold";
+  if (finish !== "Gloss" && !gold) return sourceKey ? textureMap(sourceKey, 1, 1) : null;
 
   const cacheKey = `solid-paint|${color}|${finish}|${area}`;
   if (tintedTextureCache.has(cacheKey)) return tintedTextureCache.get(cacheKey).clone();
@@ -1034,14 +1057,16 @@ function paintTextureForColor(color, finish = "Mat", area = "top") {
   canvas.height = height;
   const context = canvas.getContext("2d");
 
-  if (image) {
+  if (gold) {
+    paintGoldBase(context, width, height);
+  } else if (image) {
     context.drawImage(image, 0, 0, width, height);
   } else {
     context.fillStyle = resolveSolidPaintColor(color);
     context.fillRect(0, 0, width, height);
   }
 
-  paintSolidGlossIntoTexture(context, width, height, area, color);
+  if (finish === "Gloss") paintSolidGlossIntoTexture(context, width, height, area, color);
   forceOpaqueCanvas(context, width, height);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -1061,19 +1086,20 @@ function paintTextureForColor(color, finish = "Mat", area = "top") {
 function woodMaterial(wood, color, finish, area = "top") {
   const useFlatSurface = area === "top" || area === "sides" || area === "head";
   if (wood === "Jednolity kolor") {
-    const candy = color === "paint:candy-apple-red";
+    if (color === "paint:candy-apple-red") color = "paint:gold";
+    const gold = color === "paint:gold";
     const metallic = String(color).startsWith("paint:");
     const paintMap = paintTextureForColor(color, finish, area);
     const materialOptions = {
       color: paintMap ? "#ffffff" : resolveSolidPaintColor(color),
       map: paintMap,
-      roughness: finish === "Gloss" ? candy ? .2 : .24 : .58,
-      clearcoat: finish === "Gloss" ? candy ? .9 : .74 : .12,
+      roughness: finish === "Gloss" ? .24 : .58,
+      clearcoat: finish === "Gloss" ? .74 : .12,
       clearcoatRoughness: finish === "Gloss" ? .09 : .42,
-      metalness: metallic ? .08 : .03,
+      metalness: gold ? .65 : metallic ? .08 : .03,
       side: THREE.FrontSide
     };
-    return useFlatSurface ? flatWoodMaterial(materialOptions) : physicalMaterial(materialOptions);
+    return useFlatSurface && !gold ? flatWoodMaterial(materialOptions) : physicalMaterial(materialOptions);
   }
 
   const tint = color === "natural" ? "#ffffff" : color;
@@ -1481,7 +1507,7 @@ function applyMaterials() {
     material.dispose();
   });
   updateViewerDebug("materials");
-  render();
+  updateView();
 }
 
 function fitCamera() {
@@ -1797,6 +1823,7 @@ function alignMetalLogoGeometryLayer(object) {
 
   centerObjectGeometry(object);
   object.rotation.z = Math.PI / 2;
+  object.userData.logoBaseRotation = object.rotation.z;
   object.updateWorldMatrix(true, true);
 
   const logoBox = new THREE.Box3().setFromObject(object);
@@ -1870,6 +1897,7 @@ function updateView() {
   const degrees = Number(frameSlider.value || 0);
   const yaw = baseYaw + THREE.MathUtils.degToRad(degrees);
   pivot.rotation.y = yaw;
+  pivot.scale.x = fieldValue("handedness") === "Leworęczna" ? -1 : 1;
   updateMetalLogoVisibility(yaw);
 
   const zoomValue = Number(zoomSlider.value || 0);
@@ -1877,20 +1905,47 @@ function updateView() {
   if (logo?.userData.logoBaseScale) {
     const readabilityScale = 1 + .2 * (1 - THREE.MathUtils.smoothstep(zoomValue, 0, 50));
     const baseScale = logo.userData.logoBaseScale;
-    logo.scale.set(baseScale * readabilityScale, baseScale * readabilityScale, baseScale);
+    const leftHanded = pivot.scale.x < 0;
+    const baseRotation = logo.userData.logoBaseRotation ?? Math.PI / 2;
+    // Cancel the parent's reflection only for the lettering, then rotate the
+    // readable logo by 180 degrees. Its mirrored position stays unchanged.
+    logo.rotation.z = leftHanded ? Math.PI - baseRotation : baseRotation;
+    logo.scale.set(baseScale * readabilityScale * (leftHanded ? -1 : 1), baseScale * readabilityScale, baseScale);
   }
   const zoom = 1.24 + zoomValue / 62;
   const focusAmount = THREE.MathUtils.smoothstep(zoomValue / 100, 0, 1);
-  pivot.position.x = -zoomFocusPoint.x * focusAmount;
+  pivot.position.x = -zoomFocusPoint.x * focusAmount * pivot.scale.x;
   camera.zoom = zoom;
   verticalPan = clampVerticalPan(zoomValue, focusAmount);
   pivot.position.y = -zoomFocusPoint.y * focusAmount + verticalPan;
   camera.updateProjectionMatrix();
+  updateInteriorBackground();
   updateViewerDebug("view");
   requestRender();
 }
 
+function updateInteriorBackground() {
+  const stage = container.closest(".stage-wrap");
+  if (!stage) return;
+  const scale = camera.zoom / 1.24;
+  camera.updateWorldMatrix(true, false);
+  const origin = new THREE.Vector3().project(camera);
+  const shifted = pivot.position.clone().project(camera);
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  // Match the orthographic camera and keep the photo covering the frame at
+  // the extreme pan limits. These variables affect only the interior layer.
+  const limitX = width * (scale - 1) / 2;
+  const limitY = height * (scale - 1) / 2;
+  const x = THREE.MathUtils.clamp((shifted.x - origin.x) * width / 2, -limitX, limitX);
+  const y = THREE.MathUtils.clamp((origin.y - shifted.y) * height / 2, -limitY, limitY);
+  stage.style.setProperty("--interior-scale", String(scale));
+  stage.style.setProperty("--interior-pan-x", `${x}px`);
+  stage.style.setProperty("--interior-pan-y", `${y}px`);
+}
+
 function requestViewUpdate() {
+  window.dispatchEvent(new Event("weirdo:preview-moving"));
   if (!viewFrame) viewFrame = window.requestAnimationFrame(updateView);
 }
 
@@ -1914,6 +1969,7 @@ function resize() {
 function render() {
   renderFrame = 0;
   renderer.render(scene, camera);
+  window.dispatchEvent(new Event("weirdo:preview-rendered"));
 }
 
 function renderNow() {
@@ -1943,6 +1999,7 @@ function replaceBody(mainModel, bodyLayer) {
       bodyMeshes.push(mesh);
     } else if (normalizedLabel(mesh.name) === normalizedLabel("Bry\u0142a1")) {
       mesh.userData.forceRole = "hardware";
+      mesh.userData.annotationPart = "jack";
       plateMeshes.push(mesh);
     } else {
       discarded.push(mesh);
@@ -2081,6 +2138,8 @@ async function init() {
     child.userData.sourceMaterial = Array.isArray(child.material) ? child.material.map(item => item?.name || "").join(", ") : child.material?.name || "";
     const inferredRole = meshRole(child);
     child.userData.role = child.userData.forceRole || inferredRole;
+    if (child.userData.role === "binding" && child.userData.fretboardVariant) child.userData.annotationPart = "fret-binding";
+    else if (child.userData.role === "binding" && child.userData.forceRole === "binding") child.userData.annotationPart = "body-binding";
     if (!child.userData.forceRole && (inferredRole === "top" || inferredRole === "sides")) {
       child.visible = false;
       return;

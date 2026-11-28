@@ -6,6 +6,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { installFretboardVariants } from "./fretboard-variants.js";
 import { installPickupInserts } from "./pickup-inserts.js";
 import { elementFields, isElementActive } from "./preview-selection.js";
+import { projectAnnotations } from "./annotation-anchors.js";
 
 window.weirdoPreviewFields = elementFields;
 
@@ -67,8 +68,7 @@ const texturePaths = {
   bodyAsh: `${assetBase}/tekstury/runtime/body-ash.png`,
   paintCreamWhite: `${assetBase}/tekstury/runtime/paint-cream-white.png`,
   paintPearlWhite: `${assetBase}/tekstury/runtime/paint-pearl-white.png`,
-  paintMetallicBlack: `${assetBase}/tekstury/runtime/paint-metallic-black.png`,
-  paintCandyAppleRed: `${assetBase}/tekstury/runtime/paint-candy-apple-red.png`
+  paintMetallicBlack: `${assetBase}/tekstury/runtime/paint-metallic-black.png`
 };
 
 const metalFinishes = {
@@ -155,6 +155,8 @@ let baseYaw = 0;
 let fittedHeight = 100;
 let fixedViewHeight = null;
 let zoomFocusPoint = new THREE.Vector3(0, 0, 0);
+let verticalPan = 0;
+let panModelBounds = null;
 let viewFrame = 0;
 let renderFrame = 0;
 
@@ -175,7 +177,16 @@ globalThis.weirdoViewer3d = {
     }));
   },
   rerender: applyMaterials,
-  captureImage: captureViewerImage
+  annotationAnchors() {
+    if (!model || viewFrame || renderFrame) return null;
+    return projectAnnotations({ meshes, pivot, camera, degrees: Number(frameSlider.value || 0), zoom: Number(zoomSlider.value || 0) });
+  },
+  captureImage: captureViewerImage,
+  panByPixels: panPreviewByPixels,
+  resetPan() {
+    verticalPan = 0;
+    requestViewUpdate();
+  }
 };
 
 function updateViewerDebug(reason = "render") {
@@ -183,6 +194,7 @@ function updateViewerDebug(reason = "render") {
   container.dataset.fittedHeight = String(Math.round(fittedHeight * 1000) / 1000);
   container.dataset.fixedViewHeight = String(Math.round((fixedViewHeight || 0) * 1000) / 1000);
   container.dataset.cameraZoom = String(Math.round(camera.zoom * 1000) / 1000);
+  container.dataset.verticalPan = String(Math.round(verticalPan * 1000) / 1000);
 }
 
 function captureViewerImage(options = {}) {
@@ -190,6 +202,7 @@ function captureViewerImage(options = {}) {
 
   const previousFrame = frameSlider.value;
   const previousZoom = zoomSlider.value;
+  const previousPan = verticalPan;
   const frame = options.frame ?? 0;
   const zoom = options.zoom ?? 0;
   const type = options.type || "image/jpeg";
@@ -197,11 +210,13 @@ function captureViewerImage(options = {}) {
 
   frameSlider.value = String(frame);
   zoomSlider.value = String(zoom);
+  verticalPan = 0;
   updateView();
   renderNow();
   const image = renderer.domElement.toDataURL(type, quality);
   frameSlider.value = previousFrame;
   zoomSlider.value = previousZoom;
+  verticalPan = previousPan;
   updateView();
   return image;
 }
@@ -593,6 +608,39 @@ function applyPlanarWoodUv(mesh, referenceBox = null) {
   mesh.geometry.attributes.uv.needsUpdate = true;
 }
 
+function applyBodyWallUv(mesh, box) {
+  if (!box) return;
+  // Separate triangle UVs so the wrap seam cannot stretch across the whole texture.
+  if (mesh.geometry.index) mesh.geometry = mesh.geometry.toNonIndexed();
+  const position = mesh.geometry.attributes.position;
+  const uv = mesh.geometry.attributes.uv;
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const radiusX = Math.max(size.x / 2, .0001);
+  const radiusY = Math.max(size.y / 2, .0001);
+  const perimeter = Math.PI * (3 * (radiusX + radiusY) - Math.sqrt((3 * radiusX + radiusY) * (radiusX + 3 * radiusY)));
+  const points = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  const edge = new THREE.Vector3();
+  const normal = new THREE.Vector3();
+  for (let i = 0; i < position.count; i += 3) {
+    points.forEach((point, corner) => {
+      point.fromBufferAttribute(position, i + corner);
+      mesh.localToWorld(point);
+    });
+    normal.subVectors(points[1], points[0]).cross(edge.subVectors(points[2], points[0])).normalize();
+    if (Math.abs(normal.z) >= .7) continue;
+    const turns = points.map(point => Math.atan2((point.y - center.y) / radiusY, (point.x - center.x) / radiusX) / (2 * Math.PI) + .5);
+    if (Math.max(...turns) - Math.min(...turns) > .5) {
+      turns.forEach((turn, corner) => { if (turn < .5) turns[corner] += 1; });
+    }
+    points.forEach((point, corner) => {
+      // Grain runs around the rim; depth samples a real strip rather than one pixel.
+      uv.setXY(i + corner, (point.z - box.min.z) / Math.max(size.x, .0001), turns[corner] * perimeter / Math.max(size.y, .0001));
+    });
+  }
+  uv.needsUpdate = true;
+}
+
 function roleBounds(role, predicate = null) {
   const box = new THREE.Box3();
   let found = false;
@@ -804,6 +852,7 @@ function applyWoodUvs() {
     if (!["top", "sides", "head", "body"].includes(mesh.userData.role)) return;
     const referenceBox = mesh.userData.role === "top" ? topTextureReference : bounds[mesh.userData.role];
     applyPlanarWoodUv(mesh, referenceBox);
+    if (mesh.userData.role === "body") applyBodyWallUv(mesh, referenceBox);
   });
 }
 
@@ -958,7 +1007,7 @@ function glossCoatMaterial(role) {
 
 function resolveSolidPaintColor(color) {
   if (color === "natural") return "#d7b37a";
-  if (color === "paint:candy-apple-red") return "#b51616";
+  if (color === "paint:gold") return "#b39448";
   if (color === "paint:cream-white") return "#d8c39a";
   if (color === "paint:pearl-white") return "#f2eee6";
   if (color === "paint:metallic-black") return "#101010";
@@ -969,14 +1018,33 @@ function paintTextureKeyForColor(color) {
   return {
     "paint:cream-white": "paintCreamWhite",
     "paint:pearl-white": "paintPearlWhite",
-    "paint:metallic-black": "paintMetallicBlack",
-    "paint:candy-apple-red": "paintCandyAppleRed"
+    "paint:metallic-black": "paintMetallicBlack"
   }[color] || null;
+}
+
+function paintGoldBase(context, width, height) {
+  // Fine bronze-powder pigment: deterministic, low-contrast grain, not glitter.
+  const pixels = context.createImageData(width, height);
+  let seed = 381;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      const grain = (seed / 4294967296 - .5) * 15;
+      const sheen = 8 * Math.cos((x / width * .8 + y / height * .25) * Math.PI);
+      const i = (y * width + x) * 4;
+      pixels.data[i] = 179 + grain + sheen;
+      pixels.data[i + 1] = 148 + grain * .85 + sheen;
+      pixels.data[i + 2] = 72 + grain * .5 + sheen * .55;
+      pixels.data[i + 3] = 255;
+    }
+  }
+  context.putImageData(pixels, 0, 0);
 }
 
 function paintTextureForColor(color, finish = "Mat", area = "top") {
   const sourceKey = paintTextureKeyForColor(color);
-  if (finish !== "Gloss") return sourceKey ? textureMap(sourceKey, 1, 1) : null;
+  const gold = color === "paint:gold";
+  if (finish !== "Gloss" && !gold) return sourceKey ? textureMap(sourceKey, 1, 1) : null;
 
   const cacheKey = `solid-paint|${color}|${finish}|${area}`;
   if (tintedTextureCache.has(cacheKey)) return tintedTextureCache.get(cacheKey).clone();
@@ -989,14 +1057,16 @@ function paintTextureForColor(color, finish = "Mat", area = "top") {
   canvas.height = height;
   const context = canvas.getContext("2d");
 
-  if (image) {
+  if (gold) {
+    paintGoldBase(context, width, height);
+  } else if (image) {
     context.drawImage(image, 0, 0, width, height);
   } else {
     context.fillStyle = resolveSolidPaintColor(color);
     context.fillRect(0, 0, width, height);
   }
 
-  paintSolidGlossIntoTexture(context, width, height, area, color);
+  if (finish === "Gloss") paintSolidGlossIntoTexture(context, width, height, area, color);
   forceOpaqueCanvas(context, width, height);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -1016,19 +1086,20 @@ function paintTextureForColor(color, finish = "Mat", area = "top") {
 function woodMaterial(wood, color, finish, area = "top") {
   const useFlatSurface = area === "top" || area === "sides" || area === "head";
   if (wood === "Jednolity kolor") {
-    const candy = color === "paint:candy-apple-red";
+    if (color === "paint:candy-apple-red") color = "paint:gold";
+    const gold = color === "paint:gold";
     const metallic = String(color).startsWith("paint:");
     const paintMap = paintTextureForColor(color, finish, area);
     const materialOptions = {
       color: paintMap ? "#ffffff" : resolveSolidPaintColor(color),
       map: paintMap,
-      roughness: finish === "Gloss" ? candy ? .2 : .24 : .58,
-      clearcoat: finish === "Gloss" ? candy ? .9 : .74 : .12,
+      roughness: finish === "Gloss" ? .24 : .58,
+      clearcoat: finish === "Gloss" ? .74 : .12,
       clearcoatRoughness: finish === "Gloss" ? .09 : .42,
-      metalness: metallic ? .08 : .03,
+      metalness: gold ? .65 : metallic ? .08 : .03,
       side: THREE.FrontSide
     };
-    return useFlatSurface ? flatWoodMaterial(materialOptions) : physicalMaterial(materialOptions);
+    return useFlatSurface && !gold ? flatWoodMaterial(materialOptions) : physicalMaterial(materialOptions);
   }
 
   const tint = color === "natural" ? "#ffffff" : color;
@@ -1436,7 +1507,7 @@ function applyMaterials() {
     material.dispose();
   });
   updateViewerDebug("materials");
-  render();
+  updateView();
 }
 
 function fitCamera() {
@@ -1451,6 +1522,8 @@ function fitCamera() {
     found = true;
   });
   if (!found) box.setFromObject(model);
+  pivot.updateWorldMatrix(true, false);
+  panModelBounds = box.clone().applyMatrix4(pivot.matrixWorld.clone().invert());
   const size = box.getSize(new THREE.Vector3());
   fittedHeight = Math.max(size.y, size.x * 1.25, 1);
   if (!fixedViewHeight) fixedViewHeight = fittedHeight;
@@ -1750,6 +1823,7 @@ function alignMetalLogoGeometryLayer(object) {
 
   centerObjectGeometry(object);
   object.rotation.z = Math.PI / 2;
+  object.userData.logoBaseRotation = object.rotation.z;
   object.updateWorldMatrix(true, true);
 
   const logoBox = new THREE.Box3().setFromObject(object);
@@ -1780,11 +1854,50 @@ function updateMetalLogoVisibility(yawRadians) {
   });
 }
 
+function panPreviewByPixels(deltaY) {
+  const zoomValue = Number(zoomSlider.value || 0);
+  if (!model || zoomValue <= 0 || !Number.isFinite(deltaY)) return;
+  const height = Math.max(container.getBoundingClientRect().height, 1);
+  const worldPerPixel = (camera.top - camera.bottom) / camera.zoom / height;
+  verticalPan -= deltaY * worldPerPixel;
+  requestViewUpdate();
+}
+
+function clampVerticalPan(zoomValue, focusAmount) {
+  if (!panModelBounds || zoomValue <= 0) return 0;
+  camera.updateWorldMatrix(true, false);
+  const point = new THREE.Vector3();
+  let minY = Infinity;
+  let maxY = -Infinity;
+  // Project the cached instrument bounds, not every vertex, on each interaction.
+  for (const x of [panModelBounds.min.x, panModelBounds.max.x]) {
+    for (const y of [panModelBounds.min.y, panModelBounds.max.y]) {
+      for (const z of [panModelBounds.min.z, panModelBounds.max.z]) {
+        point.set(x, y, z).applyEuler(pivot.rotation);
+        point.x += pivot.position.x;
+        point.y -= zoomFocusPoint.y * focusAmount;
+        point.applyMatrix4(camera.matrixWorldInverse);
+        minY = Math.min(minY, point.y);
+        maxY = Math.max(maxY, point.y);
+      }
+    }
+  }
+  const visibleHeight = (camera.top - camera.bottom) / camera.zoom;
+  const padding = visibleHeight * .05;
+  const bottom = camera.bottom / camera.zoom + padding;
+  const top = camera.top / camera.zoom - padding;
+  const alignTop = top - maxY;
+  const alignBottom = bottom - minY;
+  const cameraUpY = camera.matrixWorldInverse.elements[5];
+  return THREE.MathUtils.clamp(verticalPan, Math.min(alignTop, alignBottom) / cameraUpY, Math.max(alignTop, alignBottom) / cameraUpY);
+}
+
 function updateView() {
   viewFrame = 0;
   const degrees = Number(frameSlider.value || 0);
   const yaw = baseYaw + THREE.MathUtils.degToRad(degrees);
   pivot.rotation.y = yaw;
+  pivot.scale.x = fieldValue("handedness") === "Leworęczna" ? -1 : 1;
   updateMetalLogoVisibility(yaw);
 
   const zoomValue = Number(zoomSlider.value || 0);
@@ -1792,18 +1905,47 @@ function updateView() {
   if (logo?.userData.logoBaseScale) {
     const readabilityScale = 1 + .2 * (1 - THREE.MathUtils.smoothstep(zoomValue, 0, 50));
     const baseScale = logo.userData.logoBaseScale;
-    logo.scale.set(baseScale * readabilityScale, baseScale * readabilityScale, baseScale);
+    const leftHanded = pivot.scale.x < 0;
+    const baseRotation = logo.userData.logoBaseRotation ?? Math.PI / 2;
+    // Cancel the parent's reflection only for the lettering, then rotate the
+    // readable logo by 180 degrees. Its mirrored position stays unchanged.
+    logo.rotation.z = leftHanded ? Math.PI - baseRotation : baseRotation;
+    logo.scale.set(baseScale * readabilityScale * (leftHanded ? -1 : 1), baseScale * readabilityScale, baseScale);
   }
   const zoom = 1.24 + zoomValue / 62;
   const focusAmount = THREE.MathUtils.smoothstep(zoomValue / 100, 0, 1);
-  pivot.position.x = -zoomFocusPoint.x * focusAmount;
-  pivot.position.y = -zoomFocusPoint.y * focusAmount;
+  pivot.position.x = -zoomFocusPoint.x * focusAmount * pivot.scale.x;
   camera.zoom = zoom;
+  verticalPan = clampVerticalPan(zoomValue, focusAmount);
+  pivot.position.y = -zoomFocusPoint.y * focusAmount + verticalPan;
   camera.updateProjectionMatrix();
+  updateInteriorBackground();
+  updateViewerDebug("view");
   requestRender();
 }
 
+function updateInteriorBackground() {
+  const stage = container.closest(".stage-wrap");
+  if (!stage) return;
+  const scale = camera.zoom / 1.24;
+  camera.updateWorldMatrix(true, false);
+  const origin = new THREE.Vector3().project(camera);
+  const shifted = pivot.position.clone().project(camera);
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  // Match the orthographic camera and keep the photo covering the frame at
+  // the extreme pan limits. These variables affect only the interior layer.
+  const limitX = width * (scale - 1) / 2;
+  const limitY = height * (scale - 1) / 2;
+  const x = THREE.MathUtils.clamp((shifted.x - origin.x) * width / 2, -limitX, limitX);
+  const y = THREE.MathUtils.clamp((origin.y - shifted.y) * height / 2, -limitY, limitY);
+  stage.style.setProperty("--interior-scale", String(scale));
+  stage.style.setProperty("--interior-pan-x", `${x}px`);
+  stage.style.setProperty("--interior-pan-y", `${y}px`);
+}
+
 function requestViewUpdate() {
+  window.dispatchEvent(new Event("weirdo:preview-moving"));
   if (!viewFrame) viewFrame = window.requestAnimationFrame(updateView);
 }
 
@@ -1827,6 +1969,7 @@ function resize() {
 function render() {
   renderFrame = 0;
   renderer.render(scene, camera);
+  window.dispatchEvent(new Event("weirdo:preview-rendered"));
 }
 
 function renderNow() {
@@ -1856,6 +1999,7 @@ function replaceBody(mainModel, bodyLayer) {
       bodyMeshes.push(mesh);
     } else if (normalizedLabel(mesh.name) === normalizedLabel("Bry\u0142a1")) {
       mesh.userData.forceRole = "hardware";
+      mesh.userData.annotationPart = "jack";
       plateMeshes.push(mesh);
     } else {
       discarded.push(mesh);
@@ -1994,6 +2138,8 @@ async function init() {
     child.userData.sourceMaterial = Array.isArray(child.material) ? child.material.map(item => item?.name || "").join(", ") : child.material?.name || "";
     const inferredRole = meshRole(child);
     child.userData.role = child.userData.forceRole || inferredRole;
+    if (child.userData.role === "binding" && child.userData.fretboardVariant) child.userData.annotationPart = "fret-binding";
+    else if (child.userData.role === "binding" && child.userData.forceRole === "binding") child.userData.annotationPart = "body-binding";
     if (!child.userData.forceRole && (inferredRole === "top" || inferredRole === "sides")) {
       child.visible = false;
       return;

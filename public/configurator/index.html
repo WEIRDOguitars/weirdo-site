@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261127-pricing">
+  <link rel="stylesheet" href="styles.css?v=20261128-release2">
 </head>
 <body class="setup-picker-open">
   <section id="setupPicker" class="setup-picker" aria-labelledby="setupTitle">
@@ -60,6 +60,23 @@
           <span>Cena konfiguracji <small>orientacyjna</small></span>
           <strong id="configurationPrice"></strong>
         </div>
+        <div class="preview-navigation">
+          <nav class="section-shortcuts" aria-label="Przejdź do sekcji konfiguratora">
+            <button type="button" data-section-target="head">Główka</button>
+            <button type="button" data-section-target="fretboard">Podstrunnica</button>
+            <button type="button" data-section-target="top">Top</button>
+            <button type="button" data-section-target="sides">Boki</button>
+            <button type="button" data-section-target="electronics">Elektronika</button>
+            <button type="button" data-section-target="body">Korpus</button>
+            <button type="button" data-section-target="hardware">Osprzęt</button>
+            <button type="button" data-section-target="nut">Siodełko</button>
+            <button type="button" data-section-target="technical">Parametry techniczne</button>
+            <button type="button" data-section-target="pickups">Pickupy</button>
+            <button type="button" data-section-target="binding-color">Kolor bindingu</button>
+            <button type="button" data-section-target="binding-type">Rodzaj bindingu</button>
+          </nav>
+          <label class="descriptions-toggle"><input type="checkbox" id="showPreviewDescriptions">Pokaż opisy</label>
+        </div>
       </div>
       <div class="preview-caption">
         <div><span>Top</span><strong id="previewTop">Klon falisty / Sunshine</strong></div>
@@ -76,7 +93,7 @@
           <button class="text-button" id="resetButton" type="button">Resetuj</button>
         </div>
 
-        <section class="config-block">
+        <section class="config-block" id="section-electronics">
           <div class="section-heading"><span>01</span><div><h2>Elektronika</h2><p>Wybierz układ osprzętu i dopasowaną bryłę topu oraz boków.</p></div></div>
           <fieldset>
             <legend>Układ</legend>
@@ -102,7 +119,7 @@
           </fieldset>
         </section>
 
-        <section class="config-block">
+        <section class="config-block" id="section-top">
           <div class="section-heading"><span>02</span><div><h2>Top</h2><p>Wybierz materiał i kolor nakładany na strukturę drewna.</p></div></div>
           <fieldset>
             <legend>Materiał topu</legend>
@@ -129,7 +146,7 @@
           </fieldset>
         </section>
 
-        <section class="config-block">
+        <section class="config-block" id="section-sides">
           <div class="section-heading"><span>03</span><div><h2>Boki</h2><p>Boki są osobnym elementem, nawet gdy wybierzesz ten sam materiał i kolor co top.</p></div></div>
           <fieldset>
             <legend>Materiał boków</legend>
@@ -156,7 +173,7 @@
           </fieldset>
         </section>
 
-        <section class="config-block">
+        <section class="config-block" id="section-head">
           <div class="section-heading"><span>04</span><div><h2>Główka (Head)</h2><p>Główka może być czarna albo dopasowana do topu lub boków.</p></div></div>
           <fieldset>
             <legend>Główka</legend>
@@ -175,7 +192,7 @@
           </fieldset>
         </section>
 
-        <section class="config-block">
+        <section class="config-block" id="section-body">
           <div class="section-heading"><span>05</span><div><h2>Korpus</h2><p>Baza instrumentu i jej wykończenie.</p></div></div>
           <fieldset>
             <legend>Korpus</legend>
@@ -195,7 +212,7 @@
           </fieldset>
         </section>
 
-        <section class="config-block">
+        <section class="config-block" id="section-fretboard">
           <div class="section-heading"><span>06</span><div><h2>Podstrunnica</h2><p>Materiał, rodzaj bindingu i markery.</p></div></div>
           <fieldset>
             <legend>Materiał podstrunnicy</legend>
@@ -205,7 +222,7 @@
               <label class="choice"><input type="radio" name="fretboard" value="Amarant" data-color="#65314d"><span><strong>Amarant</strong><small>Fioletowy akcent</small></span></label>
             </div>
           </fieldset>
-          <fieldset>
+          <fieldset id="section-binding-type">
             <legend>Rodzaj bindingu</legend>
             <div class="choice-grid two">
               <label class="choice"><input type="radio" name="bindingShape" value="Binding 1" checked><span><strong>Binding 1</strong><small>Ozdobny binding i kropki</small></span></label>
@@ -231,7 +248,7 @@
           </fieldset>
         </section>
 
-        <section class="config-block">
+        <section class="config-block" id="section-binding-color">
           <div class="section-heading"><span>07</span><div><h2>Kolor detali</h2><p>Wspólny kolor bindingu, markerów, motylków kluczy i nakładek Weirdo na pickupy.</p></div></div>
           <fieldset>
             <legend>Wspólny kolor</legend>
@@ -241,7 +258,7 @@
 
         </section>
 
-        <section class="config-block">
+        <section class="config-block" id="section-hardware">
           <div class="section-heading"><span>08</span><div><h2>Osprzęt i pickupy</h2><p>Mostek, klucze i pozostałe metalowe elementy kolorowane jako komplet.</p></div></div>
           <fieldset>
             <legend>Kolor</legend>
@@ -261,7 +278,7 @@
               <label class="choice"><input type="radio" name="knobColor" value="Złoty"><span><strong>Złoty</strong></span></label>
             </div>
           </fieldset>
-          <fieldset>
+          <fieldset id="section-pickups">
             <legend>Pickupy</legend>
             <div class="choice-grid two">
               <label class="choice"><input type="radio" name="pickups" value="Czarne bez puszek"><span><strong>Czarne bez puszek</strong><small>Odkryte czarne cewki</small></span></label>
@@ -300,19 +317,25 @@
             </div>
           </fieldset>
           <input type="hidden" name="pickupMagnetColor" value="Szare">
-          <div class="field-row">
-            <fieldset><legend>Mostek</legend><select name="bridge"><option selected>Tune-o-matic Gotoh</option><option>Evertune</option></select></fieldset>
-            <fieldset><legend>Klucze</legend><select name="tuners"><option selected>Gotoh SG381 MG</option><option>Gotoh SG381 MG-T</option><option>Gotoh SG 381</option></select></fieldset>
-          </div>
 
           <fieldset><legend>Straplocki</legend><div class="choice-grid two"><label class="choice recommended"><input type="radio" name="straplocks" value="Dunlop Flushmount" checked><span><strong>Dunlop Flushmount</strong><small>Rekomendowane</small></span><i>Rekomendowane</i></label><label class="choice"><input type="radio" name="straplocks" value="Schaller"><span><strong>Schaller</strong><small>Klasyczny system</small></span></label></div></fieldset>
         </section>
 
-        <section class="config-block">
-          <div class="section-heading"><span>09</span><div><h2>Parametry techniczne</h2><p>Progi, siodełko, menzura i dodatkowe modyfikacje.</p></div></div>
-            <fieldset><legend>Materiał progów</legend><div class="segmented"><label><input type="radio" name="fretMaterial" value="Stalowe" checked><span>Stalowe</span></label><label><input type="radio" name="fretMaterial" value="Niklowane"><span>Niklowane</span></label></div></fieldset>
+        <section class="config-block" id="section-technical">
+          <div class="section-heading"><span>09</span><div><h2>Parametry techniczne</h2><p>Menzura 25,5 cala, 24 progi. Dobierz osprzęt, strojenie i struny.</p></div></div>
+          <fieldset><legend>Wersja instrumentu</legend><div class="segmented"><label><input type="radio" name="handedness" value="Praworęczna" checked><span>Praworęczna</span></label><label><input type="radio" name="handedness" value="Leworęczna"><span>Leworęczna</span></label></div></fieldset>
+          <div class="field-row">
+            <fieldset><legend>Mostek</legend><div class="static-choice selected"><span>Tune-o-matic Gotoh</span><small>Evertune i Floyd Rose: planowane, obecnie niedostępne.</small></div><input type="hidden" name="bridge" value="Tune-o-matic Gotoh"></fieldset>
+            <fieldset><legend>Klucze Gotoh</legend><select name="tuners"><option value="Gotoh SG381 MG" selected>Gotoh SG381 MG - blokowane automatycznie</option><option value="Gotoh SG381 MG-T">Gotoh SG381 MG-T - blokowane klasycznie</option><option value="Gotoh SG 381">Gotoh SG381 - standardowe</option></select></fieldset>
+          </div>
+          <div class="field-row">
+            <fieldset><legend>Strojenie</legend><select name="tuning" id="tuningSelect"></select></fieldset>
+            <fieldset><legend>Struny D’Addario XS</legend><select name="stringGauge" id="stringGaugeSelect"></select><input type="hidden" name="stringBrand" value="D’Addario XS"></fieldset>
+          </div>
+          <p id="stringGaugeNote" class="submit-note"></p>
+            <fieldset><legend>Materiał progów</legend><div class="segmented"><label><input type="radio" name="fretMaterial" value="Stalowe" checked><span>Stalowe</span></label><label><input type="radio" name="fretMaterial" value="Niklowane"><span>Niklowe</span></label></div></fieldset>
           <fieldset><legend>Rozmiar progów</legend><select name="fretSize"><option value="Do ustalenia">Do wyboru po tabeli rozmiarów</option><option>Small</option><option>Medium</option><option>Jumbo</option></select></fieldset>
-          <fieldset><legend>Siodełko</legend><div class="choice-grid four compact"><label class="choice"><input type="radio" name="nut" value="Kość" checked><span><strong>Kość</strong></span></label><label class="choice"><input type="radio" name="nut" value="Mosiądz"><span><strong>Mosiądz</strong></span></label><label class="choice"><input type="radio" name="nut" value="TUSQ"><span><strong>TUSQ</strong></span></label><label class="choice"><input type="radio" name="nut" value="Róg czarny"><span><strong>Róg czarny</strong></span></label></div></fieldset>
+          <fieldset id="section-nut"><legend>Siodełko</legend><div class="choice-grid four compact"><label class="choice"><input type="radio" name="nut" value="Kość" checked><span><strong>Kość</strong></span></label><label class="choice"><input type="radio" name="nut" value="Mosiądz"><span><strong>Mosiądz</strong></span></label><label class="choice"><input type="radio" name="nut" value="TUSQ"><span><strong>TUSQ</strong></span></label><label class="choice"><input type="radio" name="nut" value="Róg czarny"><span><strong>Róg czarny</strong></span></label></div></fieldset>
 
           <div class="field-row">
             <fieldset><legend>Menzura</legend><label class="static-choice selected"><span>25.5 cala</span><small>Aktualnie dostępna opcja</small></label><input type="hidden" name="scale" value="25.5 cala"></fieldset>
@@ -343,8 +366,9 @@
     </section>
   </main>
   <div class="toast" id="toast" role="status"></div>
-  <script src="pricing.js?v=20261127-pricing"></script>
-  <script src="app.js?v=20261127-pricing"></script>
-  <script src="setup-gallery.js?v=20261127-pricing"></script>
+  <script src="pricing.js?v=20261128-release2"></script>
+  <script src="app.js?v=20261128-release2"></script>
+  <script src="preview-annotations.js?v=20261128-release2"></script>
+  <script src="setup-gallery.js?v=20261128-release2"></script>
 </body>
 </html>

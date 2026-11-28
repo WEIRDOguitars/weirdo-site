@@ -5,6 +5,13 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function (inventory) {
   "use strict";
   inventory = inventory || {};
+  const tuningGauges = {
+    E: ["9-42", "9-46", "10-46", "10-52"],
+    "Drop D": ["9-46", "10-46", "10-52"],
+    D: ["10-46", "10-52", "11-46"],
+    "Drop C": ["10-52", "11-56", "12-60"]
+  };
+  const tuningBase = { E: "E", Eb: "E", D: "D", Db: "D", C: "C", B: "B", Bb: "B", A: "A", "Drop D": "Drop D", "Drop Db": "Drop D", "Drop C": "Drop C", "Drop B": "Drop B", "Drop Bb": "Drop B", "Drop A": "Drop A" };
   const catalog = {
     version: "2026-11-27.1",
     currency: "PLN",
@@ -44,6 +51,12 @@
     const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const selections = { ...source };
     const warnings = [];
+    selections.bridge = "Tune-o-matic Gotoh";
+    selections.handedness = source.handedness === "Leworęczna" ? "Leworęczna" : "Praworęczna";
+    selections.tuning = Object.hasOwn(tuningBase, source.tuning) ? source.tuning : "E";
+    selections.stringBrand = "D’Addario XS";
+    const gauges = tuningGauges[tuningBase[selections.tuning]] || ["Do ustalenia"];
+    selections.stringGauge = gauges.includes(source.stringGauge) ? source.stringGauge : gauges[0];
     for (const [field, definition] of Object.entries(catalog.fields)) {
       const value = source[field];
       selections[field] = typeof value === "string" && Object.hasOwn(definition.values, value) ? value : definition.default;
@@ -115,6 +128,6 @@
       ...(price.requiresIndividualQuote ? [{ label: "Indywidualna wycena", value: individualQuote }] : [])
     ];
   }
-  return { catalog, calculate, normalize, optionModifier, format, summaryRows, disclaimer, individualQuote,
+  return { catalog, calculate, normalize, optionModifier, format, summaryRows, disclaimer, individualQuote, tuningGauges, tuningBase,
     setInventory(value) { inventory = value || {}; } };
 });

@@ -78,6 +78,9 @@ const defaults = {
   bridge: "Tune-o-matic Gotoh",
   tuners: "Gotoh SG381 MG",
   nut: "Kość",
+  handedness: "Praworęczna",
+  tuning: "E",
+  stringGauge: "9-42",
   straplocks: "Dunlop Flushmount"
 };
 
@@ -117,7 +120,7 @@ const solidPaintColors = [
   ["Cream White", "paint:cream-white", "radial-gradient(circle at 35% 25%, #fff2d2 0%, #dac394 50%, #987d52 100%)"],
   ["Pearl White", "paint:pearl-white", "radial-gradient(circle at 35% 25%, #ffffff 0%, #e8e4d6 48%, #aeb6b8 100%)"],
   ["Metallic Black", "paint:metallic-black", "radial-gradient(circle at 35% 25%, #64645f 0%, #131313 45%, #020202 100%)"],
-  ["Candy apple red", "paint:candy-apple-red", "radial-gradient(circle at 35% 25%, #ff5b42 0%, #b51616 48%, #350304 100%)"]
+  ["Gold", "paint:gold", "radial-gradient(circle at 35% 25%, #e1c47b 0%, #b39448 48%, #715827 100%)"]
 ];
 
 const bindingOptions = [
@@ -161,8 +164,7 @@ const paths = {
   americanWalnut: `${assetBase}/tekstury/runtime/walnut.png`,
   paintCreamWhite: `${assetBase}/tekstury/runtime/paint-cream-white.png`,
   paintPearlWhite: `${assetBase}/tekstury/runtime/paint-pearl-white.png`,
-  paintMetallicBlack: `${assetBase}/tekstury/runtime/paint-metallic-black.png`,
-  paintCandyAppleRed: `${assetBase}/tekstury/runtime/paint-candy-apple-red.png`
+  paintMetallicBlack: `${assetBase}/tekstury/runtime/paint-metallic-black.png`
 };
 
 const images = {};
@@ -216,6 +218,7 @@ function fieldValue(name) {
 }
 
 function selectedColorName(value, wood = "") {
+  if (value === "paint:candy-apple-red") value = "paint:gold";
   const allColors = wood ? colorPaletteForWood(wood) : [...finishColors, ...burstColors, ...solidPaintColors];
   return allColors.find(([, color]) => color === value)?.[0] || value;
 }
@@ -318,7 +321,7 @@ function solidLayer(mask, color) {
 
 function resolveSolidPaintColor(color) {
   if (color === "natural") return "#d6b27a";
-  if (color === "paint:candy-apple-red") return "#b51616";
+  if (color === "paint:gold" || color === "paint:candy-apple-red") return "#b39448";
   if (color === "paint:cream-white") return "#d8c39a";
   if (color === "paint:pearl-white") return "#f2eee6";
   if (color === "paint:metallic-black") return "#101010";
@@ -329,8 +332,7 @@ function paintTextureForColor(color) {
   return {
     "paint:cream-white": images.paintCreamWhite,
     "paint:pearl-white": images.paintPearlWhite,
-    "paint:metallic-black": images.paintMetallicBlack,
-    "paint:candy-apple-red": images.paintCandyAppleRed
+    "paint:metallic-black": images.paintMetallicBlack
   }[color] || null;
 }
 
@@ -813,6 +815,19 @@ function drawCanvas() {
   // Legacy callers must not render the obsolete layered preview during 3D loading.
 }
 
+const { tuningGauges, tuningBase } = window.WeirdoPricing;
+function syncStringOptions(preferred = fieldValue("stringGauge")) {
+  const tuning = document.querySelector("#tuningSelect");
+  if (!tuning.value) tuning.value = "E";
+  const sizes = tuningGauges[tuningBase[tuning.value]] || ["Do ustalenia"];
+  const select = document.querySelector("#stringGaugeSelect");
+  select.replaceChildren(...sizes.map(size => new Option(size, size)));
+  select.value = sizes.includes(preferred) ? preferred : sizes[0];
+  document.querySelector("#stringGaugeNote").textContent = sizes[0] === "Do ustalenia"
+    ? "Rozmiary strun dla tego strojenia zostaną uzupełnione. Dobór potwierdzimy indywidualnie."
+    : "D’Addario XS. Dostępne rozmiary zależą od wybranego strojenia.";
+}
+
 function updateSummary() {
   refreshChoiceState();
   const wiringOptions = document.querySelector("#electronicsWiringOptions");
@@ -854,6 +869,9 @@ function updateSummary() {
     ["Straplocki", data.get("straplocks")],
     ["Menzura / liczba progów", `${data.get("scale")} / ${data.get("fretCount")}`],
     ["Rozmiar progów", data.get("fretSize")],
+    ["Wersja instrumentu", data.get("handedness")],
+    ["Strojenie", data.get("tuning")],
+    ["Struny", `${data.get("stringBrand")} / ${data.get("stringGauge")}`],
     ["Modyfikacje", data.get("modifications") || "Brak"]
   ];
 
@@ -944,6 +962,7 @@ function resetForm() {
   window.weirdoActiveElements.clear();
   chosenFields.clear();
   form.reset();
+  syncStringOptions(defaults.stringGauge);
   syncFretMarkerOptions();
   document.querySelector("#topColor").value = defaults.topColor;
   document.querySelector("#sideColor").value = defaults.sideColor;
@@ -1018,8 +1037,11 @@ function animateWheelZoom() {
   const current = Number(zoomSlider.value || 0);
   const target = wheelZoomTarget ?? current;
   const next = current + (target - current) * .28;
+  const roundedNext = Math.round(next * 10) / 10;
 
-  if (Math.abs(target - next) < .08) {
+  // Stop when slider precision prevents further progress; otherwise the
+  // unchanged value emits input forever and keeps preview callouts hidden.
+  if (Math.abs(target - next) < .08 || roundedNext === current) {
     zoomSlider.value = String(Math.round(target * 10) / 10);
     zoomSlider.dispatchEvent(new Event("input", { bubbles: true }));
     wheelZoomTarget = null;
@@ -1027,7 +1049,7 @@ function animateWheelZoom() {
     return;
   }
 
-  zoomSlider.value = String(Math.round(next * 10) / 10);
+  zoomSlider.value = String(roundedNext);
   zoomSlider.dispatchEvent(new Event("input", { bubbles: true }));
   wheelZoomFrame = window.requestAnimationFrame(animateWheelZoom);
 }
@@ -1147,6 +1169,8 @@ function setRadioValue(name, value) {
 }
 
 function setFormValue(name, value) {
+  if (name === "bridge") value = "Tune-o-matic Gotoh";
+  if ((name === "topColor" || name === "sideColor") && value === "paint:candy-apple-red") value = "paint:gold";
   if (name === "binding" && value === "Żółty") value = "Złoto-perłowy";
   const controls = Array.from(form.querySelectorAll(`[name="${CSS.escape(name)}"]`));
   if (!controls.length) return false;
@@ -1178,7 +1202,10 @@ function applyImportedSelections(selections) {
   const restoredFields = Array.isArray(previewState?.fields) ? previewState.fields : Object.keys(selections);
   restoredFields.forEach(name => chosenFields.add(name));
 
-  const deferred = new Set(["topColor", "sideColor", "pickupFrameColor", "pickupCenterColor"]);
+  const deferred = new Set(["topColor", "sideColor", "pickupFrameColor", "pickupCenterColor", "stringGauge"]);
+  setFormValue("handedness", defaults.handedness);
+  setFormValue("tuning", defaults.tuning);
+  setFormValue("bridge", defaults.bridge);
   setFormValue("pickupDesign", defaults.pickupDesign);
   setFormValue("electronicsWiring", defaults.electronicsWiring);
   setFormValue("singlePickupWiring", defaults.singlePickupWiring);
@@ -1191,8 +1218,9 @@ function applyImportedSelections(selections) {
 
   syncFretMarkerOptions();
   renderPalettes();
+  syncStringOptions(selections.stringGauge);
   for (const name of deferred) {
-    if (Object.hasOwn(selections, name)) setFormValue(name, selections[name]);
+    if (name !== "stringGauge" && Object.hasOwn(selections, name)) setFormValue(name, selections[name]);
   }
 
   const pickupPreset = pickupPresetValues(fieldValue("pickups"));
@@ -1264,6 +1292,8 @@ function syncFretMarkerOptions() {
   noMarker.closest("label").hidden = !allowNoMarker;
 }
 
+document.querySelector("#tuningSelect").replaceChildren(...Object.keys(tuningBase).map(tuning => new Option(tuning, tuning, tuning === "E", tuning === "E")));
+syncStringOptions(defaults.stringGauge);
 renderPalettes();
 applyPickupPreset();
 syncFretMarkerOptions();
@@ -1284,12 +1314,14 @@ document.addEventListener("click", event => {
 });
 
 form.addEventListener("input", () => {
+  syncStringOptions();
   syncFretMarkerOptions();
   if (!viewer3dReady || stageWrap?.classList.contains("viewer-3d-fallback")) drawCanvas();
   updateSummary();
 });
 
 form.addEventListener("change", event => {
+  if (event.target?.name === "tuning") syncStringOptions();
   if (event.target?.name === "bindingShape" || event.target?.name === "fretMarker") {
     syncFretMarkerOptions();
     window.weirdoViewer3d?.rerender?.();

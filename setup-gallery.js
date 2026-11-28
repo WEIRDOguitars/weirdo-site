@@ -15,7 +15,7 @@
       window.addEventListener("weirdo:viewer3d-failed", () => reject(new Error("Nie udało się uruchomić modelu 3D.")), { once: true });
       const script = document.createElement("script");
       script.type = "module";
-      script.src = "viewer3d.bundle.js?v=20261124-pan-axis-lock";
+      script.src = "viewer3d.bundle.js?v=20261128-release2";
       script.onerror = () => reject(new Error("Nie udało się pobrać podglądu. Odśwież stronę."));
       document.body.append(script);
     });
@@ -61,7 +61,7 @@
   }
 
   function showSpecification(setup) {
-    const values = setup.selections;
+    const values = window.WeirdoPricing.normalize(setup.selections).selections;
     const dialog = document.createElement("dialog");
     dialog.className = "setup-specification";
     dialog.setAttribute("aria-labelledby", "setupSpecTitle");
@@ -97,7 +97,8 @@
       ]],
       ["Parametry techniczne", [
         ["Menzura", values.scale], ["Liczba progów", values.fretCount],
-        ["Materiał progów", values.fretMaterial], ["Rozmiar progów", values.fretSize], ["Siodełko", values.nut]
+        ["Materiał progów", values.fretMaterial], ["Rozmiar progów", values.fretSize], ["Siodełko", values.nut],
+        ["Wersja instrumentu", values.handedness], ["Strojenie", values.tuning], ["Struny", `${values.stringBrand} / ${values.stringGauge}`]
       ]],
       ["Drewno i wykończenie", [
         ["Top", [values.topWood, selectedColorName(values.topColor, values.topWood), values.topFinish].filter(Boolean).join(" / ")],
