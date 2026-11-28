@@ -9,6 +9,7 @@ const definitions = [
   { id: "top", role: "top", x: .22, y: .35, side: "right" },
   { id: "sides", role: "sides", x: .14, y: .38, side: "left" },
   { id: "electronics", role: "knobs", x: .5, y: .5, side: "right", individual: true },
+  { id: "bridge", role: "hardware", tag: "bridge", x: .5, y: .5, side: "left", individual: true },
   { id: "tuners", role: "tuners", x: .5, y: .5, side: "left", individual: true, both: true },
   { id: "pickups", role: "pickupCenter", x: .5, y: .5, side: "right", individual: true },
   { id: "binding-color", role: "binding", tag: "body-binding", x: .1, y: .4, side: "left", individual: true },

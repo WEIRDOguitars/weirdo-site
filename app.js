@@ -970,7 +970,7 @@ function resetForm() {
   frameSlider.value = "0";
   zoomSlider.value = "0";
   window.weirdoViewer3d?.resetPan?.();
-  if (backgroundSelect) backgroundSelect.value = "studio";
+  if (backgroundSelect) backgroundSelect.value = "interior";
   applyPreviewBackground();
   renderPalettes();
   window.weirdoViewer3d?.rerender?.();
@@ -980,7 +980,7 @@ function resetForm() {
 
 function applyPreviewBackground() {
   if (!stageWrap) return;
-  const value = backgroundSelect?.value || "studio";
+  const value = backgroundSelect?.value || "interior";
   stageWrap.classList.toggle("stage-bg-black", value === "black");
   stageWrap.classList.toggle("stage-bg-light", value === "light");
   stageWrap.classList.toggle("stage-bg-interior", value === "interior");
@@ -1344,6 +1344,7 @@ form.addEventListener("change", event => {
 frameSlider.addEventListener("input", drawCanvas);
 zoomSlider.addEventListener("input", drawCanvas);
 backgroundSelect?.addEventListener("change", applyPreviewBackground);
+applyPreviewBackground();
 modelImportInput?.addEventListener("change", async event => {
   const file = event.target.files?.[0];
   if (!file) return;

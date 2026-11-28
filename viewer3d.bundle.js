@@ -38144,6 +38144,7 @@ var definitions = [
   { id: "top", role: "top", x: 0.22, y: 0.35, side: "right" },
   { id: "sides", role: "sides", x: 0.14, y: 0.38, side: "left" },
   { id: "electronics", role: "knobs", x: 0.5, y: 0.5, side: "right", individual: true },
+  { id: "bridge", role: "hardware", tag: "bridge", x: 0.5, y: 0.5, side: "left", individual: true },
   { id: "tuners", role: "tuners", x: 0.5, y: 0.5, side: "left", individual: true, both: true },
   { id: "pickups", role: "pickupCenter", x: 0.5, y: 0.5, side: "right", individual: true },
   { id: "binding-color", role: "binding", tag: "body-binding", x: 0.1, y: 0.4, side: "left", individual: true },
@@ -38258,6 +38259,39 @@ function projectAnnotations({ meshes: meshes2, pivot: pivot2, camera: camera2, d
     anchors.protectedAreas.push({ left: Math.min(...points.map((p) => p.x)), right: Math.max(...points.map((p) => p.x)), top: Math.min(...points.map((p) => p.y)), bottom: Math.max(...points.map((p) => p.y)) });
   }
   return anchors;
+}
+
+// wood-color-filter.js
+function filterWoodPixels(pixels, filter) {
+  const operations = [...filter.matchAll(/(contrast|brightness|saturate|grayscale)\(([\d.]+)\)/g)].map(([, name, amount]) => [name, Number(amount)]);
+  const clamp2 = (value) => Math.max(0, Math.min(255, value));
+  for (let i2 = 0; i2 < pixels.length; i2 += 4) {
+    let r = pixels[i2], g = pixels[i2 + 1], b = pixels[i2 + 2];
+    for (const [name, amount] of operations) {
+      if (name === "brightness") {
+        r *= amount;
+        g *= amount;
+        b *= amount;
+      } else if (name === "contrast") {
+        r = (r - 127.5) * amount + 127.5;
+        g = (g - 127.5) * amount + 127.5;
+        b = (b - 127.5) * amount + 127.5;
+      } else {
+        const saturation = name === "grayscale" ? 1 - Math.min(1, amount) : amount;
+        const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        r = luminance + (r - luminance) * saturation;
+        g = luminance + (g - luminance) * saturation;
+        b = luminance + (b - luminance) * saturation;
+      }
+      r = clamp2(r);
+      g = clamp2(g);
+      b = clamp2(b);
+    }
+    pixels[i2] = r;
+    pixels[i2 + 1] = g;
+    pixels[i2 + 2] = b;
+  }
+  return pixels;
 }
 
 // viewer3d.js
@@ -38550,10 +38584,19 @@ function tintedTextureMap(key, color, area2 = "top", finish = "Mat", repeatX = 1
   } else {
     context.clearRect(0, 0, width, height);
   }
-  context.filter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)" : isVividRed ? isMaple ? "grayscale(1) contrast(1.55) brightness(.8)" : "grayscale(1) contrast(1.45) brightness(.94)" : isPoplarYellow ? "contrast(1.7) brightness(.9) saturate(1.12)" : color === "burst:purple-rain" && vivid ? isMaple ? "contrast(1.4) brightness(.9)" : "contrast(2.55) brightness(.62) saturate(1.45)" : color === "natural" ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
-  context.drawImage(image, 0, textureOffsetY, width, height);
-  if (textureOffsetY < 0) context.drawImage(image, 0, height + textureOffsetY, width, height);
-  context.filter = "none";
+  const woodFilter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)" : isVividRed ? isMaple ? "grayscale(1) contrast(1.55) brightness(.8)" : "grayscale(1) contrast(1.45) brightness(.94)" : isPoplarYellow ? "contrast(1.7) brightness(.9) saturate(1.12)" : color === "burst:purple-rain" && vivid ? isMaple ? "contrast(1.4) brightness(.9)" : "contrast(2.55) brightness(.62) saturate(1.45)" : color === "natural" ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)" : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
+  const woodCanvas = document.createElement("canvas");
+  woodCanvas.width = width;
+  woodCanvas.height = height;
+  const woodContext = woodCanvas.getContext("2d", { willReadFrequently: true });
+  woodContext.drawImage(image, 0, textureOffsetY, width, height);
+  if (textureOffsetY < 0) woodContext.drawImage(image, 0, height + textureOffsetY, width, height);
+  if (woodFilter !== "none") {
+    const pixels = woodContext.getImageData(0, 0, width, height);
+    filterWoodPixels(pixels.data, woodFilter);
+    woodContext.putImageData(pixels, 0, 0);
+  }
+  context.drawImage(woodCanvas, 0, 0);
   forceOpaqueCanvas(context, width, height);
   if (color !== "natural") {
     const tintableWoodArea = acceptsWoodTint(area2);
@@ -40051,6 +40094,7 @@ async function init() {
     child.userData.sourceMaterial = Array.isArray(child.material) ? child.material.map((item) => item?.name || "").join(", ") : child.material?.name || "";
     const inferredRole = meshRole(child);
     child.userData.role = child.userData.forceRole || inferredRole;
+    if (child.userData.role === "hardware" && !child.userData.annotationPart && /most|gotoh|wozek|trzpien/.test(materialName(child))) child.userData.annotationPart = "bridge";
     if (child.userData.role === "binding" && child.userData.fretboardVariant) child.userData.annotationPart = "fret-binding";
     else if (child.userData.role === "binding" && child.userData.forceRole === "binding") child.userData.annotationPart = "body-binding";
     if (!child.userData.forceRole && (inferredRole === "top" || inferredRole === "sides")) {

@@ -7,6 +7,7 @@ import { installFretboardVariants } from "./fretboard-variants.js";
 import { installPickupInserts } from "./pickup-inserts.js";
 import { elementFields, isElementActive } from "./preview-selection.js";
 import { projectAnnotations } from "./annotation-anchors.js";
+import { filterWoodPixels } from "./wood-color-filter.js";
 
 window.weirdoPreviewFields = elementFields;
 
@@ -362,16 +363,25 @@ function tintedTextureMap(key, color, area = "top", finish = "Mat", repeatX = 1,
   } else {
     context.clearRect(0, 0, width, height);
   }
-  context.filter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)"
+  const woodFilter = color === "burst:evil-green" && vivid ? "contrast(1.22) brightness(.94)"
     : isVividRed ? (isMaple ? "grayscale(1) contrast(1.55) brightness(.8)" : "grayscale(1) contrast(1.45) brightness(.94)")
     : isPoplarYellow ? "contrast(1.7) brightness(.9) saturate(1.12)"
     : color === "burst:purple-rain" && vivid ? (isMaple ? "contrast(1.4) brightness(.9)" : "contrast(2.55) brightness(.62) saturate(1.45)")
     : color === "natural"
     ? isMaple ? "none" : isPoplar ? "contrast(1.18) brightness(.98) saturate(1.06)" : "contrast(1.12) brightness(.9) saturate(1.04)"
     : isMaple ? "contrast(1.14) brightness(.9) saturate(1.05)" : isPoplar ? "contrast(2.3) brightness(.62) saturate(1.45)" : "contrast(1.8) brightness(.68) saturate(1.2)";
-  context.drawImage(image, 0, textureOffsetY, width, height);
-  if (textureOffsetY < 0) context.drawImage(image, 0, height + textureOffsetY, width, height);
-  context.filter = "none";
+  const woodCanvas = document.createElement("canvas");
+  woodCanvas.width = width;
+  woodCanvas.height = height;
+  const woodContext = woodCanvas.getContext("2d", { willReadFrequently: true });
+  woodContext.drawImage(image, 0, textureOffsetY, width, height);
+  if (textureOffsetY < 0) woodContext.drawImage(image, 0, height + textureOffsetY, width, height);
+  if (woodFilter !== "none") {
+    const pixels = woodContext.getImageData(0, 0, width, height);
+    filterWoodPixels(pixels.data, woodFilter);
+    woodContext.putImageData(pixels, 0, 0);
+  }
+  context.drawImage(woodCanvas, 0, 0);
 
   forceOpaqueCanvas(context, width, height);
 
@@ -2138,6 +2148,8 @@ async function init() {
     child.userData.sourceMaterial = Array.isArray(child.material) ? child.material.map(item => item?.name || "").join(", ") : child.material?.name || "";
     const inferredRole = meshRole(child);
     child.userData.role = child.userData.forceRole || inferredRole;
+    if (child.userData.role === "hardware" && !child.userData.annotationPart
+      && /most|gotoh|wozek|trzpien/.test(materialName(child))) child.userData.annotationPart = "bridge";
     if (child.userData.role === "binding" && child.userData.fretboardVariant) child.userData.annotationPart = "fret-binding";
     else if (child.userData.role === "binding" && child.userData.forceRole === "binding") child.userData.annotationPart = "body-binding";
     if (!child.userData.forceRole && (inferredRole === "top" || inferredRole === "sides")) {

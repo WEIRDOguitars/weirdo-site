@@ -10,9 +10,10 @@
   overlay.append(svg);
   stage.append(overlay);
   const labels = { head: "Główka", nut: "Siodełko", fretboard: "Podstrunnica", top: "Top", sides: "Boki", electronics: "Elektronika", body: "Korpus", tuners: "Osprzęt", jack: "Osprzęt", pickups: "Pickupy", "binding-color": "Kolor bindingu", "binding-type": "Rodzaj bindingu" };
+  labels.bridge = "Osprzęt";
   const mobile = matchMedia("(max-width: 720px)");
   const toggle = document.querySelector("#showPreviewDescriptions");
-  toggle.checked = !mobile.matches;
+  toggle.checked = true;
   const visibilityButton = document.createElement("button");
   visibilityButton.type = "button";
   visibilityButton.className = "annotation-visibility-toggle";
@@ -45,7 +46,7 @@
   let timer;
 
   function jumpToSection(id) {
-    if (id === "tuners" || id === "jack") id = "hardware";
+    if (id === "tuners" || id === "jack" || id === "bridge") id = "hardware";
     const section = document.getElementById("section-" + id);
     const heading = section?.querySelector("h2, legend");
     if (!heading) return;
@@ -127,15 +128,19 @@
     const occupied = [];
     const protectedAreas = (data.protectedAreas || []).map(box => ({ left: box.left * width - 6, right: box.right * width + 6, top: box.top * height - 6, bottom: box.bottom * height + 6 }));
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    const ordered = [...data].sort((a, b) => a.y - b.y);
+    // Reserve room for the main editable surface before surrounding details.
+    const priority = id => id === "top" ? 2 : id === "bridge" ? 1 : 0;
+    const ordered = [...data].sort((a, b) => priority(b.id) - priority(a.id) || a.y - b.y);
     for (const anchor of ordered) {
       const button = buttons[anchor.id];
       button.hidden = false;
       const w = button.offsetWidth, h = button.offsetHeight;
       const px = anchor.x * width, py = anchor.y * height;
-      const side = anchor.side === "left" && px > w + 36 ? "left"
+      const preferredSide = anchor.side === "left" && px > w + 36 ? "left"
         : anchor.side === "right" && px < width - w - 36 ? "right"
         : px > width / 2 ? "left" : "right";
+      let placement;
+      for (const side of [preferredSide, preferredSide === "left" ? "right" : "left"]) {
       const x = side === "left" ? 8 : width - w - 8;
       const edge = side === "left" ? x + w : x;
       const elbow = side === "left" ? edge + 10 : edge - 10;
@@ -149,21 +154,23 @@
       };
       if (Math.abs(edge - px) < 18 || px < 8 || px > width - 8 || py < 8 || py > height - 8) { button.hidden = true; continue; }
       const preferredY = Math.max(8, Math.min(height - h - 8, py - h / 2));
-      const y = [0, 1, -1, 2, -2].map(step => preferredY + step * (h + 8)).find(candidate =>
+      const y = [0, 1, -1, 2, -2, 3, -3].map(step => preferredY + step * (h + 8)).find(candidate =>
         candidate >= 44 && candidate + h <= height - 8 && Math.abs(candidate + h / 2 - py) <= 75
         && !protectedAreas.some(box => x < box.right && x + w > box.left && candidate < box.bottom && candidate + h > box.top)
         && !occupied.some(box => x < box.right + 8 && x + w + 8 > box.left && candidate < box.bottom + 8 && candidate + h + 8 > box.top)
         && !occupied.some(box =>
-          (box.side === side && candidate + h / 2 <= (box.top + box.bottom) / 2)
-          || pathsIntersect(pathAt(candidate), box.path)
+          pathsIntersect(pathAt(candidate), box.path)
           || pathHitsBox(pathAt(candidate), box)
           || pathHitsBox(box.path, { left: x, right: x + w, top: candidate, bottom: candidate + h })));
-      if (y === undefined) { button.hidden = true; continue; }
-      occupied.push({ left: x, right: x + w, top: y, bottom: y + h, side, path: pathAt(y) });
+      if (y !== undefined) { placement = { x, y, side, path: pathAt(y) }; break; }
+      }
+      if (!placement) { button.hidden = true; continue; }
+      button.hidden = false;
+      const { x, y, side, path } = placement;
+      occupied.push({ left: x, right: x + w, top: y, bottom: y + h, side, path });
       button.style.left = x + "px";
       button.style.top = y + "px";
       const line = document.createElementNS(svg.namespaceURI, "polyline");
-      const path = pathAt(y);
       line.setAttribute("points", path.map(point => `${point.x},${point.y}`).join(" "));
       const dot = document.createElementNS(svg.namespaceURI, "circle");
       dot.setAttribute("cx", path[0].x); dot.setAttribute("cy", path[0].y); dot.setAttribute("r", "2.5");

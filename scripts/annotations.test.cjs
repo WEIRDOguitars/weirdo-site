@@ -99,3 +99,17 @@ test('surface anchor moves to the edge nearest the label', () => {
   assert.ok(Math.abs(left.y - y) < 2);
   assert.ok(Math.abs(right.y - y) < 2);
 });
+
+test('front hardware callout targets the bridge, not switches or rear jack', () => {
+  const state = fixture();
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(1, .2, .2), new THREE.MeshBasicMaterial());
+  bridge.position.set(0, -2, .4);
+  bridge.userData = { role: 'hardware', annotationPart: 'bridge' };
+  state.pivot.add(bridge);
+  state.meshes.push(bridge);
+  const anchor = projectAnnotations(state).find(a => a.id === 'bridge');
+  assert.ok(anchor);
+  assert.ok(anchor.y > .65);
+  bridge.visible = false;
+  assert.ok(!projectAnnotations(state).some(a => a.id === 'bridge'));
+});
