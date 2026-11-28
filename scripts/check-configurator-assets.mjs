@@ -8,9 +8,9 @@ const source = await readFile(new URL('../viewer3d.js', import.meta.url), 'utf8'
 const assets = [...new Set([...source.matchAll(/\$\{assetBase\}\/([^`]+)`/g)].map(match => match[1]))];
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const setups = JSON.parse(await readFile(new URL('../public/configurator/setups.json', import.meta.url), 'utf8'));
-assets.push('setup-gallery.js', 'setups.json', 'assets/setups/blank.jpg', ...setups.map(setup => setup.thumbnail));
+assets.push('setup-gallery.js', 'setups.json', 'assets/background-interior.png', 'assets/setups/blank.jpg', ...setups.map(setup => setup.thumbnail));
 let failures = 0;
-for (const asset of ['index.html', 'app.js', 'styles.css', 'viewer3d.bundle.js', ...assets]) {
+for (const asset of ['index.html', 'app.js', 'pricing.js', 'styles.css', 'viewer3d.bundle.js', ...assets]) {
   try {
     const local = await readFile(new URL(`../public/configurator/${asset}`, import.meta.url));
     const response = await fetch(new URL(asset, base.endsWith('/') ? base : `${base}/`));

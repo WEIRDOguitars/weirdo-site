@@ -126,6 +126,14 @@
       section.append(heading, list);
       dialog.append(section);
     }
+    const pricingSection = document.createElement("section");
+    pricingSection.className = "pricing-summary";
+    for (const { label, value } of window.WeirdoPricing.summaryRows(window.WeirdoPricing.calculate(values))) {
+      const row = document.createElement("p");
+      row.textContent = label + ": " + value;
+      pricingSection.append(row);
+    }
+    dialog.append(pricingSection);
     const edit = document.createElement("button");
     edit.type = "button";
     edit.className = "primary-button";
@@ -171,6 +179,12 @@
       actions.append(specification);
     }
     article.append(img, title, actions);
+    if (setup.selections) {
+      const price = document.createElement("p");
+      price.className = "setup-price";
+      price.textContent = window.WeirdoPricing.format(window.WeirdoPricing.calculate(setup.selections).totalPrice) + " · orientacyjnie";
+      actions.before(price);
+    }
     return article;
   }
 

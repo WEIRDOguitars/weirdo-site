@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:pricing": "node --test scripts/pricing.test.cjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

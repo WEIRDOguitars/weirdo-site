@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261101-setup-picker">
+  <link rel="stylesheet" href="styles.css?v=20261127-pricing">
 </head>
 <body class="setup-picker-open">
   <section id="setupPicker" class="setup-picker" aria-labelledby="setupTitle">
@@ -53,10 +53,14 @@
             <option value="studio" selected>Studio</option>
             <option value="black">Czarne</option>
             <option value="light">Jasne</option>
+            <option value="interior">Wnętrze</option>
           </select>
         </label>
+        <div class="preview-price" role="status" aria-live="polite">
+          <span>Cena konfiguracji <small>orientacyjna</small></span>
+          <strong id="configurationPrice"></strong>
+        </div>
       </div>
-
       <div class="preview-caption">
         <div><span>Top</span><strong id="previewTop">Klon falisty / Sunshine</strong></div>
         <div><span>Boki</span><strong id="previewSides">Jednolity czarny</strong></div>
@@ -320,6 +324,7 @@
         <section class="config-block summary-block">
           <div class="section-heading"><span>10</span><div><h2>Podsumowanie</h2><p>Aktualny zestaw wyborów do dalszej wyceny.</p></div></div>
           <div class="summary-list" id="summaryList"></div>
+          <div class="pricing-summary" id="pricingSummary" aria-label="Kalkulacja ceny"></div>
           <div class="contact-grid">
             <label>Nazwa modelu<input name="modelName" type="text" placeholder="np. Purple Storm" maxlength="120"></label>
             <label>Imię i nazwisko<input name="customerName" type="text" autocomplete="name" placeholder="Jan Kowalski" maxlength="120"></label>
@@ -338,7 +343,8 @@
     </section>
   </main>
   <div class="toast" id="toast" role="status"></div>
-  <script src="app.js?v=20261124-pan-axis-lock"></script>
-  <script src="setup-gallery.js?v=20261124-pan-axis-lock"></script>
+  <script src="pricing.js?v=20261127-pricing"></script>
+  <script src="app.js?v=20261127-pricing"></script>
+  <script src="setup-gallery.js?v=20261127-pricing"></script>
 </body>
 </html>

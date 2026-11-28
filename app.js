@@ -597,6 +597,7 @@ function applyAvailabilityForGroup(inputName, entries = {}) {
 
 function applyInventory(inventory) {
   if (!inventory?.woods) return;
+  window.WeirdoPricing.setInventory(inventory);
   applyAvailabilityForGroup("topWood", inventory.woods.top);
   applyAvailabilityForGroup("sideWood", inventory.woods.sides);
   updateSummary();
@@ -860,6 +861,46 @@ function updateSummary() {
   document.querySelector("#previewTop").textContent = `${data.get("topWood")} / ${topColor}`;
   document.querySelector("#previewSides").textContent = `${data.get("sideWood")} / ${sideColor}`;
   document.querySelector("#previewHardware").textContent = data.get("hardwareColor");
+  updatePricing();
+}
+
+function updatePricing() {
+  const pricing = window.WeirdoPricing;
+  const selections = getFormSelections();
+  const price = pricing.calculate(selections);
+  document.querySelector("#configurationPrice").textContent = pricing.format(price.totalPrice);
+  const summary = document.querySelector("#pricingSummary");
+  summary.replaceChildren(...pricing.summaryRows(price).map(({ label, value }) => {
+    const row = document.createElement("div");
+    row.className = "summary-row";
+    const caption = document.createElement("span");
+    caption.textContent = label;
+    const amount = document.createElement("strong");
+    amount.textContent = value;
+    row.append(caption, amount);
+    return row;
+  }));
+  form.querySelectorAll('input[type="radio"]').forEach(input => {
+    const label = input.closest("label");
+    if (!label) return;
+    const amount = input.matches(":disabled") ? 0 : pricing.optionModifier(input.name, input.value, selections);
+    let badge = label.querySelector(".price-adjustment");
+    if (!amount) { badge?.remove(); return; }
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "price-adjustment";
+      // Keep prices outside strong/small option descriptions used by summaries.
+      label.append(badge);
+    }
+    badge.textContent = pricing.format(amount);
+  });
+  form.querySelectorAll("select[name] option").forEach(option => {
+    option.dataset.originalLabel ||= option.textContent;
+    const amount = pricing.optionModifier(option.parentElement.name, option.value, selections);
+    // Explicit value prevents an appended price from changing the option identifier.
+    if (!option.hasAttribute("value")) option.value = option.textContent;
+    option.textContent = option.dataset.originalLabel + (amount ? " (" + pricing.format(amount) + ")" : "");
+  });
 }
 
 function showToast(message, duration = 4200) {
@@ -923,6 +964,7 @@ function applyPreviewBackground() {
   const value = backgroundSelect?.value || "studio";
   stageWrap.classList.toggle("stage-bg-black", value === "black");
   stageWrap.classList.toggle("stage-bg-light", value === "light");
+  stageWrap.classList.toggle("stage-bg-interior", value === "interior");
 }
 
 function setSliderValue(slider, value) {
@@ -1126,6 +1168,7 @@ function applyImportedSelections(selections) {
   if (!selections || typeof selections !== "object") {
     throw new Error("Plik JSON nie zawiera konfiguracji do wczytania.");
   }
+  selections = window.WeirdoPricing.normalize(selections).selections;
   let previewState = null;
   try { previewState = JSON.parse(selections.previewState || "null"); } catch {}
   window.weirdoActiveElements = new Set(Array.isArray(previewState?.elements)
@@ -1322,6 +1365,7 @@ form.addEventListener("submit", async event => {
       customerEmail: form.elements.customerEmail.value,
       website: form.elements.website.value,
       selections: getFormSelections(),
+      pricing: window.WeirdoPricing.calculate(getFormSelections()),
       summary: getSummaryItems(),
       image
     };

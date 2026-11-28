@@ -2,6 +2,7 @@ import path from "node:path";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { NextResponse } from "next/server";
 import { list, put } from "@vercel/blob";
+import pricing from "../../../pricing";
 
 const DEFAULT_COPY_EMAIL = "weirdoguitars@gmail.com";
 const MAX_IMAGE_LENGTH = 4_500_000;
@@ -16,6 +17,7 @@ type SubmissionRecord = {
   };
   selections: Record<string, string>;
   summary: SummaryItem[];
+  pricing: ReturnType<typeof pricing.calculate>;
   image: {
     filename: string;
     pathname?: string;
@@ -220,7 +222,13 @@ export async function POST(request: Request) {
         .filter(([key]) => key)
     );
 
-    const rows = cleanSummary
+    // Ignore client-supplied prices, including any price rows in older summaries.
+    const calculation = pricing.calculate(cleanSelections);
+    const pricingLabels = new Set(pricing.summaryRows(calculation).map(item => item.label));
+    const verifiedSummary = cleanSummary.filter(item => !pricingLabels.has(item.label)
+      && !/cena|ceny|cennik|modyfikator|wycena/i.test(item.label));
+    verifiedSummary.push(...pricing.summaryRows(calculation));
+    const rows = verifiedSummary
       .map(
         ({ label, value }) => `
           <tr>
@@ -243,7 +251,8 @@ export async function POST(request: Request) {
         email: customerEmail
       },
       selections: cleanSelections,
-      summary: cleanSummary,
+      summary: verifiedSummary,
+      pricing: calculation,
       image: {
         filename: imageFilename
       }
@@ -275,6 +284,7 @@ export async function POST(request: Request) {
             <p style="margin-top:0;color:#746f66">Klient: <strong>${escapeHtml(customerName)}</strong><br>E-mail: <a href="mailto:${escapeHtml(customerEmail)}">${escapeHtml(customerEmail)}</a></p>
             <table style="width:100%;border-collapse:collapse;margin-top:24px">${rows}</table>
             <p style="margin-top:24px;color:#746f66">Wizualizacja konfiguracji znajduje się w załączniku.</p>
+            <p>Wysłanie formularza nie jest zamówieniem.</p>
           </div>`,
         attachments: [
           {
